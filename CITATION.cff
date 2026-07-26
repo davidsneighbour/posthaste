@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use code or cite this website, please cite it as below."
+authors:
+  - family-names: "Kollitsch"
+    given-names: "Patrick"
+    orcid: "https://orcid.org/0000-0001-6250-2135"
+title: "Posthaste!"
+version: v1.0.0
+date-released: 2026-07-26
+url: "https://github.com/davidsneighbour/posthaste"
+repository-code: "https://github.com/davidsneighbour/posthaste"
+license: "MIT"
+commit: 5cd81653861f6ca845c4be0453a33f8685594a8d
+keywords:
+  - ai
+  - social media
+  - skill
