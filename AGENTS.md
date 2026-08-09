@@ -76,6 +76,11 @@ GitHub labels for type, priority, status, and affected area, using existing
 repository labels. Close issues only through `closes #123` in commit messages;
 do not close issues manually.
 
+When reporting, reviewing, or documenting repository work, link references to
+commits, pull requests, and issues whenever they are mentioned. If the referenced
+object is not available locally yet but will have a stable GitHub URL after the
+repository state is pushed, use that URL form anyway.
+
 Use conventional changelog subjects for all commits:
 `type(optional-scope): imperative summary`. For skill changes, use
 `feat(<skill-name>): ...` for new or changed capabilities and
