@@ -6,7 +6,7 @@ structure, security, and editing rules belong here.
 
 ## Project Structure & Module Organization
 
-Posthaste is a collection of standalone AI skills for drafting, adapting,
+Posthaste! is a collection of standalone AI skills for drafting, adapting,
 reviewing, and publishing social media content. There is no app, build output,
 or central test suite; the repository product is the Markdown and scripts under
 `skills/`. Each `skills/<skill-name>/` directory is independently loadable and

@@ -159,7 +159,7 @@ test("malformed TOML includes the file path", async () => {
       defaults: DEFAULTS,
       knownNetworks: KNOWN_NETWORKS,
     }),
-    new RegExp(`Malformed Posthaste TOML config at ${paths.globalConfigPath}`),
+    new RegExp(`Malformed Posthaste! TOML config at ${paths.globalConfigPath}`),
   );
 });
 

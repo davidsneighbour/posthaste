@@ -1,7 +1,7 @@
 ---
 id: posthaste-tumblr-refresh-token
 name: posthaste-tumblr-refresh-token
-title: Posthaste Tumblr Refresh Token
+title: Posthaste! Tumblr Refresh Token
 description: Create or refresh Tumblr OAuth2 credentials for the posthaste-prepare-link direct Tumblr poster using a local loopback callback server. Use when Tumblr posting is missing TUMBLR_ACCESS_TOKEN, TUMBLR_REFRESH_TOKEN, or TUMBLR_BLOG_IDENTIFIER, when the Tumblr token has expired, or when the user asks to generate Tumblr credentials for posthaste-prepare-link.
 ---
 

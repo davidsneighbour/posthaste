@@ -1,13 +1,13 @@
 ---
 id: posthaste
 name: posthaste
-title: Posthaste
-description: Route the Posthaste social publishing skillset. Use when the user wants to draft, adapt, review, publish, or configure social media workflows with Posthaste, especially when choosing between link preparation, hashtag generation, configuration management, and social network credential helper skills.
+title: Posthaste!
+description: Route the Posthaste! social publishing skill set. Use when the user wants to draft, adapt, review, publish, or configure social media workflows with Posthaste!, especially when choosing between link preparation, hashtag generation, configuration management, and social network credential helper skills.
 ---
 
-Use this router skill to choose the right Posthaste workflow.
+Use this router skill to choose the right Posthaste! workflow.
 
-Before handing an operational request to another Posthaste skill, use
+Before handing an operational request to another Posthaste! skill, use
 `posthaste-config` discovery and merge rules to resolve available global and
 project configuration. Pass only relevant resolved values to the consuming
 skill. Explicit values in the current user request always take precedence over
@@ -15,7 +15,7 @@ configuration. Do not turn this implicit lookup into a questionnaire merely
 because no config file exists; consuming-skill defaults remain valid.
 
 * Use `posthaste-config` when the user wants to inspect, validate, initialise,
-  or edit Posthaste configuration, or when another Posthaste skill needs
+  or edit Posthaste! configuration, or when another Posthaste! skill needs
   persistent user or project defaults resolved.
 * Use `posthaste-prepare-link` when the user supplies a URL and wants a social
   post drafted, adapted for network limits, checked against the posted log, or

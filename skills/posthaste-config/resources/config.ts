@@ -241,7 +241,7 @@ async function parseTomlFile(filePath: string): Promise<PlainRecord> {
         ? error.message
         : String(error);
     throw new Error(
-      `Malformed Posthaste TOML config at ${filePath}: ${detail}`,
+      `Malformed Posthaste! TOML config at ${filePath}: ${detail}`,
     );
   }
 }
@@ -330,7 +330,7 @@ function validateRawConfig(
       raw.version !== SUPPORTED_CONFIG_VERSION
     ) {
       throw new Error(
-        "Invalid Posthaste config key version: expected integer 1.",
+        "Invalid Posthaste! config key version: expected integer 1.",
       );
     }
   }
@@ -349,7 +349,7 @@ function validatePosting(value: unknown): void {
   }
 
   if (!isPlainRecord(value)) {
-    throw new Error("Invalid Posthaste config key posting: expected a table.");
+    throw new Error("Invalid Posthaste! config key posting: expected a table.");
   }
 
   if (value.default_networks === undefined) {
@@ -358,14 +358,14 @@ function validatePosting(value: unknown): void {
 
   if (!Array.isArray(value.default_networks)) {
     throw new Error(
-      "Invalid Posthaste config key posting.default_networks: expected an array of network names.",
+      "Invalid Posthaste! config key posting.default_networks: expected an array of network names.",
     );
   }
 
   for (const network of value.default_networks) {
     if (typeof network !== "string" || network.trim().length === 0) {
       throw new Error(
-        "Invalid Posthaste config key posting.default_networks: expected non-empty string network names.",
+        "Invalid Posthaste! config key posting.default_networks: expected non-empty string network names.",
       );
     }
   }
@@ -377,7 +377,7 @@ function validatePaths(value: unknown): void {
   }
 
   if (!isPlainRecord(value)) {
-    throw new Error("Invalid Posthaste config key paths: expected a table.");
+    throw new Error("Invalid Posthaste! config key paths: expected a table.");
   }
 
   for (const key of ["dotenv", "posted_log"] as const) {
@@ -385,7 +385,7 @@ function validatePaths(value: unknown): void {
 
     if (path !== undefined && (typeof path !== "string" || !path.trim())) {
       throw new Error(
-        `Invalid Posthaste config key paths.${key}: expected a non-empty string.`,
+        `Invalid Posthaste! config key paths.${key}: expected a non-empty string.`,
       );
     }
   }
@@ -401,7 +401,9 @@ function validateNetworks(
   }
 
   if (!isPlainRecord(value)) {
-    throw new Error("Invalid Posthaste config key networks: expected a table.");
+    throw new Error(
+      "Invalid Posthaste! config key networks: expected a table.",
+    );
   }
 
   const known = knownNetworks ? new Set(knownNetworks) : undefined;
@@ -413,7 +415,7 @@ function validateNetworks(
 
     if (!isPlainRecord(networkValue)) {
       throw new Error(
-        `Invalid Posthaste config key networks.${network}: expected a table.`,
+        `Invalid Posthaste! config key networks.${network}: expected a table.`,
       );
     }
 
@@ -422,7 +424,7 @@ function validateNetworks(
       typeof networkValue.enabled !== "boolean"
     ) {
       throw new Error(
-        `Invalid Posthaste config key networks.${network}.enabled: expected a boolean.`,
+        `Invalid Posthaste! config key networks.${network}.enabled: expected a boolean.`,
       );
     }
 
@@ -435,20 +437,20 @@ function validateNetworks(
 function validateEnvTable(network: string, value: unknown): void {
   if (!isPlainRecord(value)) {
     throw new Error(
-      `Invalid Posthaste config key networks.${network}.env: expected a table.`,
+      `Invalid Posthaste! config key networks.${network}.env: expected a table.`,
     );
   }
 
   for (const [key, envName] of Object.entries(value)) {
     if (typeof envName !== "string") {
       throw new Error(
-        `Invalid Posthaste config key networks.${network}.env.${key}: expected an environment variable name string.`,
+        `Invalid Posthaste! config key networks.${network}.env.${key}: expected an environment variable name string.`,
       );
     }
 
     if (!ENV_NAME_PATTERN.test(envName)) {
       throw new Error(
-        `Invalid Posthaste config key networks.${network}.env.${key}: expected an uppercase environment variable name.`,
+        `Invalid Posthaste! config key networks.${network}.env.${key}: expected an uppercase environment variable name.`,
       );
     }
   }
@@ -479,7 +481,7 @@ function validateNoInlineSecrets(value: unknown, path: string[] = []): void {
       )
     ) {
       throw new Error(
-        `Invalid Posthaste config key ${configPath(childPath)}: store only environment variable names in TOML, not credential values.`,
+        `Invalid Posthaste! config key ${configPath(childPath)}: store only environment variable names in TOML, not credential values.`,
       );
     }
 
@@ -547,7 +549,7 @@ function validateResolvedConfig(
     for (const network of resolved.posting.defaultNetworks) {
       if (!known.has(network)) {
         throw new Error(
-          `Invalid Posthaste config key posting.default_networks: unknown network ${network}.`,
+          `Invalid Posthaste! config key posting.default_networks: unknown network ${network}.`,
         );
       }
     }
@@ -556,7 +558,7 @@ function validateResolvedConfig(
   for (const network of resolved.posting.defaultNetworks) {
     if (resolved.networks[network]?.enabled === false) {
       throw new Error(
-        `Invalid Posthaste config: posting.default_networks includes disabled network ${network}.`,
+        `Invalid Posthaste! config: posting.default_networks includes disabled network ${network}.`,
       );
     }
   }

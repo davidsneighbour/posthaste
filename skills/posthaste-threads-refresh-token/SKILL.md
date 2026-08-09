@@ -1,7 +1,7 @@
 ---
 id: posthaste-threads-refresh-token
 name: posthaste-threads-refresh-token
-title: Posthaste Threads Refresh Token
+title: Posthaste! Threads Refresh Token
 description: Create or refresh a long-lived Threads API access token for the posthaste-prepare-link direct Threads poster using a local loopback callback server. Use when Threads posting is missing THREADS_ACCESS_TOKEN or THREADS_USER_ID, when the long-lived Threads token has expired or is close to expiring, or when the user asks to generate Threads credentials for posthaste-prepare-link.
 ---
 

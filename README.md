@@ -1,14 +1,15 @@
-# Posthaste
+<!-- markdownlint-disable-next-line MD026 -->
+# Posthaste!
 
 ![You won't ever believe what I have to tell you!](.github/assets/posthaste.jpg)
 
 ## AI-assisted social publishing, posthaste
 
-Posthaste is a collection of reusable AI skills for drafting, adapting, reviewing, and publishing social media content. Let's keep social publishing workflows focused, portable, and easy to use across projects and AI assistants.
+Posthaste! is a collection of reusable AI skills for drafting, adapting, reviewing, and publishing social media content. Let's keep social publishing workflows focused, portable, and easy to use across projects and AI assistants.
 
 ## Install
 
-Install the current posthaste skillset with:
+Install the current Posthaste! skill set with:
 
 ```bash
 npx skills add davidsneighbour/posthaste --yes
@@ -32,7 +33,7 @@ Use `--global` when the skills should be available outside the current project.
 
 ## Configuration
 
-Posthaste can use layered TOML configuration for persistent, non-secret defaults:
+Posthaste! can use layered TOML configuration for persistent, non-secret defaults:
 
 ```text
 ~/.config/posthaste/config.toml   global user configuration
@@ -73,7 +74,7 @@ Do not store passwords, access tokens, refresh tokens, client secrets, private k
 
 ## Skills
 
-* `posthaste` routes the social publishing skillset.
+* `posthaste` routes the social publishing skill set.
 * `posthaste-config` loads, validates, merges, and creates layered TOML configuration.
 * `posthaste-prepare-link` drafts and publishes confirmed social posts from URLs.
 * `posthaste-post-retrieve-hashtags` generates topical hashtags from a URL or supplied text.

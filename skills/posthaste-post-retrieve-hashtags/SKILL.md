@@ -1,8 +1,8 @@
 ---
 id: posthaste-post-retrieve-hashtags
 name: posthaste-post-retrieve-hashtags
-title: Posthaste Hashtag Retrieval
-description: Generate topical hashtags for a URL or supplied text block. Use when Posthaste needs hashtag candidates for social posts, when the user asks for hashtags for a link or passage, or when posthaste-prepare-link needs source-specific hashtag suggestions.
+title: Posthaste! Hashtag Retrieval
+description: Generate topical hashtags for a URL or supplied text block. Use when Posthaste! needs hashtag candidates for social posts, when the user asks for hashtags for a link or passage, or when posthaste-prepare-link needs source-specific hashtag suggestions.
 ---
 
 Generate hashtags that accurately describe the subject matter of a URL or supplied content block.

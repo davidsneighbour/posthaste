@@ -1,7 +1,7 @@
 ---
 id: posthaste-reddit-refresh-token
 name: posthaste-reddit-refresh-token
-title: Posthaste Reddit Refresh Token
+title: Posthaste! Reddit Refresh Token
 description: Create a Reddit OAuth refresh token for the posthaste-prepare-link direct Reddit poster using a local loopback callback server. Use when Reddit posting is missing REDDIT_REFRESH_TOKEN or REDDIT_ACCESS_TOKEN, when setting up Reddit OAuth for social posting, or when the user asks to generate Reddit credentials for posthaste-prepare-link.
 ---
 

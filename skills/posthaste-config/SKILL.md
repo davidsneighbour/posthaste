@@ -1,13 +1,13 @@
 ---
 id: posthaste-config
 name: posthaste-config
-title: Posthaste Config
-description: Load, merge, validate, explain, or create Posthaste TOML configuration. Use when another Posthaste skill needs user or project defaults, when the user asks what Posthaste configuration is active, or when the user wants to initialise or change global or project Posthaste settings.
+title: Posthaste! Config
+description: Load, merge, validate, explain, or create Posthaste! TOML configuration. Use when another Posthaste! skill needs user or project defaults, when the user asks what Posthaste! configuration is active, or when the user wants to initialise or change global or project Posthaste! settings.
 ---
 
-Manage persistent, non-secret configuration shared by Posthaste skills.
+Manage persistent, non-secret configuration shared by Posthaste! skills.
 
-Posthaste configuration is layered on top of defaults owned by each consuming
+Posthaste! configuration is layered on top of defaults owned by each consuming
 skill. This skill owns config discovery, precedence, safety rules, validation,
 and interactive setup. It does not redefine another skill's built-in defaults.
 
@@ -21,7 +21,7 @@ Support these locations:
 ```
 
 Resolve the project configuration from the current project or repository root,
-not from the installed Posthaste skill directory.
+not from the installed Posthaste! skill directory.
 
 If a caller explicitly provides a config file, treat that as an additional
 explicit config layer above project configuration. Do not silently invent other
@@ -278,7 +278,7 @@ The skill must work in both environments.
 
 Do not store questionnaire answers in agent memory as a substitute for writing
 the requested config. Agent memory may help draft prose or recall preferences,
-but operational Posthaste defaults come from explicit configuration.
+but operational Posthaste! defaults come from explicit configuration.
 
 ## Use from other posthaste skills
 

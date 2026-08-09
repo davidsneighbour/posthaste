@@ -1,7 +1,7 @@
 ---
 id: posthaste-prepare-link
 name: posthaste-prepare-link
-title: Posthaste Prepare Link
+title: Posthaste! Prepare Link
 description: Take a URL, pull its title/description/tags, screenshot the page, and draft a social post in Patrick's voice with topic hashtags derived from the linked page. Publishes through @humanwhocodes/crosspost or direct platform APIs only after explicit confirmation, attaches the screenshot on networks that support images, and keeps a durable per-network log of what has already been posted so the same link is never reposted to the same network by accident. Use for `/posthaste-prepare-link`, "post this link", "share this article", or "make a post about this page".
 ---
 
@@ -72,7 +72,7 @@ its JSON result, and record the posted URL. The coordinator invokes these
 direct scripts with `node` so they do not depend on a globally installed
 `tsx`.
 
-Use configured networks from the resolved Posthaste TOML configuration plus the
+Use configured networks from the resolved Posthaste! TOML configuration plus the
 environment. The helper loads built-in skill defaults, then overlays
 `~/.config/posthaste/config.toml`, the current project `.posthaste.toml`,
 environment-specific overrides such as `CROSSPOST_DOTENV`, and finally explicit

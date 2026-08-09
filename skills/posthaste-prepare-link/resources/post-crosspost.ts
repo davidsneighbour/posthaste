@@ -231,7 +231,7 @@ const PREPARE_LINK_DEFAULTS: PosthasteConfigDefaults = {
 function printHelp(): void {
   console.log(`
 Post a confirmed message using @humanwhocodes/crosspost or direct network APIs,
-and record each network in the shared "Posthaste posted" log.
+and record each network in the shared "Posthaste! posted" log.
 
 Usage:
   node post-crosspost.ts --message-file ./message.txt --image ./shot.png --image-alt "..." --source-url https://example.com/post
@@ -785,7 +785,7 @@ function validateNetworkConfiguration(
 
   if (disabled.length > 0) {
     throw new Error(
-      `Requested network is disabled by Posthaste config: ${disabled.join(", ")}`,
+      `Requested network is disabled by Posthaste! config: ${disabled.join(", ")}`,
     );
   }
 
