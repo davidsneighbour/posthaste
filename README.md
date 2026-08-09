@@ -1,21 +1,21 @@
 <!-- markdownlint-disable-next-line MD026 -->
 # Posthaste!
 
-!(You won't ever believe what I have to tell you!)(.github/assets/posthaste.jpg)
+![You won't ever believe what I have to tell you!](.github/assets/posthaste.jpg)
 
 ## AI-assisted social publishing, posthaste
 
 Posthaste! is a collection of reusable AI skills for drafting, adapting, reviewing, and publishing social media content. Let's keep social publishing workflows focused, portable, and easy to use across projects and AI assistants.
 
-* (AI-assisted social publishing, posthaste)(#ai-assisted-social-publishing-posthaste)
-* (Install)(#install)
-* (Update)(#update)
-* (Configuration)(#configuration)
-* (Networks)(#networks)
-  * (Crosspost networks)(#crosspost-networks)
-  * (X/Twitter manual posting)(#xtwitter-manual-posting)
-  * (Token-authenticated networks)(#token-authenticated-networks)
-* (Skills)(#skills)
+* [AI-assisted social publishing, posthaste](#ai-assisted-social-publishing-posthaste)
+* [Install](#install)
+* [Update](#update)
+* [Configuration](#configuration)
+* [Networks](#networks)
+  * [Crosspost networks](#crosspost-networks)
+  * [X/Twitter manual posting](#xtwitter-manual-posting)
+  * [Token-authenticated networks](#token-authenticated-networks)
+* [Skills](#skills)
 
 ## Install
 
@@ -68,21 +68,21 @@ Example:
 ```toml
 version = 1
 
-(posting)
-default_networks = (
+[posting]
+default_networks = [
   "mastodon",
   "bluesky",
   "linkedin",
-)
+]
 
-(paths)
+[paths]
 dotenv = "~/.env"
 posted_log = "~/.local/share/posthaste-prepare-link/posted.jsonl"
 
-(networks.reddit)
+[networks.reddit]
 enabled = true
 
-(networks.reddit.env)
+[networks.reddit.env]
 access_token = "REDDIT_ACCESS_TOKEN"
 client_id = "REDDIT_CLIENT_ID"
 client_secret = "REDDIT_CLIENT_SECRET"
@@ -99,7 +99,7 @@ Posthaste! separates networks by how much setup and automation they can safely s
 
 ### Crosspost networks
 
-`posthaste-prepare-link` can publish confirmed posts through `@humanwhocodes/crosspost` for these networks:
+`posthaste-prepare-link` can publish confirmed posts through [`@humanwhocodes/crosspost`](https://github.com/humanwhocodes/crosspost) for these networks:
 
 * Mastodon: set `MASTODON_ACCESS_TOKEN` and `MASTODON_HOST`.
 * Bluesky: set `BLUESKY_HOST`, `BLUESKY_IDENTIFIER`, and `BLUESKY_PASSWORD`.
