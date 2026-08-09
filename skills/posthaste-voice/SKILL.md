@@ -25,9 +25,9 @@ patterns, and weak prose. Treat it as diagnostic guidance, not a rigid ban list.
 
 The mechanical copy rules that apply to all written files regardless of task
 (straight quotes, no decorative unicode, sentence-case headings, restrained
-punctuation, plain vocabulary) live in `instructions/voice.instructions.md` at
-the repository root. This skill's guidance is the deeper editorial layer on
-top of those baseline rules.
+punctuation, plain vocabulary) live in `voice.instructions.md` in this skill
+directory. This skill's guidance is the deeper editorial layer on top of those
+baseline rules.
 
 ## Voice target
 
@@ -101,7 +101,7 @@ For blog posts, essays, reviews, retrospectives, and letters:
 
 * allow first person when supported
 * keep the route to the conclusion, not only the conclusion
-* preserve useful uncertainty, irritation, humour, and judgment
+* preserve useful uncertainty, irritation, humour, and judgement
 * prefer a lived sequence of thought over a polished explainer arc
 
 For documentation, tutorials, and project notes:

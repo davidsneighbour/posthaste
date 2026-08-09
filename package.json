@@ -10,7 +10,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "check": "biome check . && npm run typecheck && npm run test && npm run lint:markdown",
+    "check": "biome check . && npm run typecheck && npm run test && npm run lint:markdown && npm run lint:spelling",
     "check:fix": "biome check --write .",
     "format": "biome format --write .",
     "format:check": "biome format .",
@@ -18,6 +18,7 @@
     "lint:fix": "biome lint --write .",
     "lint:markdown": "markdownlint-cli2 --config ./node_modules/@dnbhq/markdownlint-config/.markdownlint-cli2.jsonc \"**/*.{md,mdx}\" \"#scratch/**\"",
     "lint:markdown:fix": "markdownlint-cli2 --config ./node_modules/@dnbhq/markdownlint-config/.markdownlint-cli2.jsonc --fix \"**/*.{md,mdx}\" \"#scratch/**\"",
+    "lint:spelling": "cspell .",
     "release": "release-it --config .release-it.ts --ci",
     "release:dry": "release-it --config .release-it.ts --dry-run --ci",
     "release:force": "release-it --config .release-it.ts --ci --no-increment",
@@ -40,7 +41,39 @@
     "@release-it/conventional-changelog": "12.0.0",
     "@types/node": "26.2.0",
     "@types/twitter-text": "3.1.10",
+    "cspell": "10.0.1",
     "release-it": "21.0.1",
     "typescript": "7.0.2"
+  },
+  "cspell": {
+    "version": "0.2",
+    "language": "en-GB",
+    "files": [
+      "**/*"
+    ],
+    "ignorePaths": [
+      "node_modules",
+      "package-lock.json",
+      "scratch"
+    ],
+    "patterns": [
+      {
+        "name": "hashtags",
+        "pattern": "/#[\\p{L}\\p{N}_-]+/gu"
+      }
+    ],
+    "ignoreRegExpList": [
+      "hashtags"
+    ],
+    "dictionaryDefinitions": [
+      {
+        "name": "posthaste",
+        "path": "./.vscode/dictionary.txt",
+        "addWords": true
+      }
+    ],
+    "dictionaries": [
+      "posthaste"
+    ]
   }
 }

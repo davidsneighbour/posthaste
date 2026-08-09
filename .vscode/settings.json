@@ -1,0 +1,12 @@
+{
+  "cSpell.customDictionaries": {
+    "posthaste": {
+      "addWords": true,
+      "name": "posthaste",
+      "path": "${workspaceFolder}/.vscode/dictionary.txt",
+      "scope": "workspace"
+    }
+  },
+  "cSpell.dictionaries": ["posthaste"],
+  "cSpell.language": "en-GB"
+}

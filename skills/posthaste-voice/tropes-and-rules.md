@@ -214,7 +214,7 @@ Watch for:
 * it is widely believed
 
 Fix by naming the source, removing the claim, or writing the claim as the author's
-own judgment when that is true.
+own judgement when that is true.
 
 ### Notability padding
 
@@ -550,7 +550,7 @@ user has not asked for an impersonal form.
 2. Keep the author's real uncertainty, frustration, surprise, or change of mind
    when the source supports it.
 3. Use time markers only when supplied or safely generic.
-4. Keep judgments in the author's voice.
+4. Keep judgements in the author's voice.
 5. Do not universalise the author's experience.
 6. Do not invent proof, receipts, conversations, metrics, or client names.
 7. Do not write "I" unless the text represents the author's experience or opinion.
@@ -580,11 +580,10 @@ Watch for:
 ## Formatting tells
 
 The baseline punctuation, heading-case, unicode, and bullet-formatting rules
-are always-on and live in `instructions/voice.instructions.md` at the
-repository root, not here. Apply them during every edit. Watch in particular
-for em dash overuse, bold-first bullets, inline-header vertical lists,
-title-case headings, decorative unicode, and curly quotes, since generated
-prose drifts toward all of them by default.
+are always-on and live in `voice.instructions.md` in this skill directory. Apply
+them during every edit. Watch in particular for em dash overuse, bold-first
+bullets, inline-header vertical lists, title-case headings, decorative unicode,
+and curly quotes, since generated prose drifts toward all of them by default.
 
 ## Filler and hedging
 

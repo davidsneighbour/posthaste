@@ -62,7 +62,7 @@ No coverage threshold is defined. Validate changed scripts with targeted
 `--help`, dry-run, or non-writing modes before handoff. For publishing, OAuth,
 and browser-assisted flows, never perform real posting, credential writes, login
 automation, or final publish clicks without explicit user confirmation. When a
-skill's behavior changes, update its `SKILL.md` in the same change.
+skill's behaviour changes, update its `SKILL.md` in the same change.
 
 ## Commit & Pull Request Guidelines
 
