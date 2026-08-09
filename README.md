@@ -39,7 +39,33 @@ Posthaste can use layered TOML configuration for persistent, non-secret defaults
 .posthaste.toml                   project configuration
 ```
 
-Configuration is applied over defaults owned by each skill. Project settings override global settings, and explicit command or user-request values override configuration.
+Configuration is applied over defaults owned by each skill. Project settings override global settings, environment-specific overrides such as `CROSSPOST_DOTENV` override those files where applicable, and explicit command or user-request values override configuration.
+
+Example:
+
+```toml
+version = 1
+
+[posting]
+default_networks = [
+  "mastodon",
+  "bluesky",
+  "linkedin",
+]
+
+[paths]
+dotenv = "~/.env"
+posted_log = "~/.local/share/posthaste-prepare-link/posted.jsonl"
+
+[networks.reddit]
+enabled = true
+
+[networks.reddit.env]
+access_token = "REDDIT_ACCESS_TOKEN"
+client_id = "REDDIT_CLIENT_ID"
+client_secret = "REDDIT_CLIENT_SECRET"
+refresh_token = "REDDIT_REFRESH_TOKEN"
+```
 
 Use `posthaste-config` to inspect, validate, initialise, or edit these files. The setup workflow can ask for values such as default posting networks, custom paths, and environment-variable name overrides.
 

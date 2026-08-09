@@ -1,18 +1,28 @@
 #!/usr/bin/env node
 
+import type { ResolvedPosthasteConfig } from "../../posthaste-config/resources/config.ts";
 import {
   asRecord,
   type CommonDirectConfig,
   fetchJson,
   firstString,
-  getEnvValue,
+  getConfiguredEnvValue,
+  loadDirectRuntimeConfig,
   printJson,
-  readDotenv,
   readMessage,
-  requireEnvValue,
+  requireConfiguredEnvValue,
 } from "./direct-api-utils.ts";
 
 const DEFAULT_DOTENV_PATH = "~/.env";
+const THREADS_DEFAULTS = {
+  enabled: true,
+  env: {
+    access_token: "THREADS_ACCESS_TOKEN",
+    access_token_expires_at: "THREADS_ACCESS_TOKEN_EXPIRES_AT",
+    user_id: "THREADS_USER_ID",
+    username: "THREADS_USERNAME",
+  },
+};
 
 interface ThreadsConfig extends CommonDirectConfig {
   linkAttachment?: string;
@@ -53,6 +63,7 @@ function requireArg(argv: string[], index: number, flag: string): string {
 function parseArgs(argv: string[]): ThreadsConfig {
   const config: ThreadsConfig = {
     dotenvPath: DEFAULT_DOTENV_PATH,
+    explicitDotenvPath: false,
     dryRun: false,
   };
   let index = 0;
@@ -85,6 +96,7 @@ function parseArgs(argv: string[]): ThreadsConfig {
 
       case "--dotenv":
         config.dotenvPath = nextValue(arg);
+        config.explicitDotenvPath = true;
         break;
 
       case "--dry-run":
@@ -100,9 +112,13 @@ function parseArgs(argv: string[]): ThreadsConfig {
 }
 
 function assertThreadsTokenNotExpired(
+  config: ResolvedPosthasteConfig,
   dotenvValues: Record<string, string>,
 ): void {
-  const expiresAt = getEnvValue(
+  const expiresAt = getConfiguredEnvValue(
+    config,
+    "threads",
+    "access_token_expires_at",
     "THREADS_ACCESS_TOKEN_EXPIRES_AT",
     dotenvValues,
   );
@@ -125,31 +141,47 @@ function assertThreadsTokenNotExpired(
 }
 
 async function postThreads(): Promise<void> {
-  const config = parseArgs(process.argv.slice(2));
-  const message = await readMessage(config);
-  const dotenvValues = await readDotenv(config.dotenvPath);
+  const cliConfig = parseArgs(process.argv.slice(2));
+  const message = await readMessage(cliConfig);
+  const runtime = await loadDirectRuntimeConfig(
+    cliConfig,
+    "threads",
+    THREADS_DEFAULTS,
+  );
 
-  if (config.dryRun) {
+  if (cliConfig.dryRun) {
     printJson({
       network: "threads",
       dryRun: true,
       characters: [...message].length,
-      linkAttachment: config.linkAttachment,
+      linkAttachment: cliConfig.linkAttachment,
     });
     return;
   }
 
-  const userId = requireEnvValue("THREADS_USER_ID", dotenvValues);
-  const accessToken = requireEnvValue("THREADS_ACCESS_TOKEN", dotenvValues);
-  assertThreadsTokenNotExpired(dotenvValues);
+  const userId = requireConfiguredEnvValue(
+    runtime.config,
+    "threads",
+    "user_id",
+    "THREADS_USER_ID",
+    runtime.dotenvValues,
+  );
+  const accessToken = requireConfiguredEnvValue(
+    runtime.config,
+    "threads",
+    "access_token",
+    "THREADS_ACCESS_TOKEN",
+    runtime.dotenvValues,
+  );
+  assertThreadsTokenNotExpired(runtime.config, runtime.dotenvValues);
   const createBody = new URLSearchParams({
     access_token: accessToken,
     media_type: "TEXT",
     text: message,
   });
 
-  if (config.linkAttachment) {
-    createBody.set("link_attachment", config.linkAttachment);
+  if (cliConfig.linkAttachment) {
+    createBody.set("link_attachment", cliConfig.linkAttachment);
   }
   const created = asRecord(
     await fetchJson(
@@ -162,7 +194,7 @@ async function postThreads(): Promise<void> {
         body: createBody,
       },
       "Threads media container creation",
-      dotenvValues,
+      runtime.dotenvValues,
     ),
   );
   const creationId = firstString(created.id);
@@ -186,10 +218,16 @@ async function postThreads(): Promise<void> {
         body: publishBody,
       },
       "Threads publish",
-      dotenvValues,
+      runtime.dotenvValues,
     ),
   );
-  const username = getEnvValue("THREADS_USERNAME", dotenvValues);
+  const username = getConfiguredEnvValue(
+    runtime.config,
+    "threads",
+    "username",
+    "THREADS_USERNAME",
+    runtime.dotenvValues,
+  );
   const postId = firstString(published.id);
   const url =
     username && postId

@@ -17,6 +17,12 @@ import {
 } from "node:http";
 import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import {
+  envNameFor,
+  loadPosthasteConfig,
+  POSTHASTE_SHARED_NETWORKS,
+  type ResolvedPosthasteConfig,
+} from "../../posthaste-config/resources/config.ts";
 
 interface CliConfig {
   clientId?: string;
@@ -28,6 +34,7 @@ interface CliConfig {
   explicitRedirectUri: boolean;
   scope: string;
   dotenvPath: string;
+  explicitDotenvPath: boolean;
   userAgent?: string;
   subreddit?: string;
   writeEnv: boolean;
@@ -65,6 +72,13 @@ const ENV_KEYS = [
   "REDDIT_USER_AGENT",
   "REDDIT_SUBREDDIT",
 ] as const;
+const REDDIT_ENV_DEFAULTS = {
+  client_id: "REDDIT_CLIENT_ID",
+  client_secret: "REDDIT_CLIENT_SECRET",
+  refresh_token: "REDDIT_REFRESH_TOKEN",
+  user_agent: "REDDIT_USER_AGENT",
+  subreddit: "REDDIT_SUBREDDIT",
+};
 
 function printHelp(): void {
   console.log(`
@@ -122,6 +136,7 @@ function parseArgs(argv: string[]): CliConfig {
     explicitRedirectUri: false,
     scope: DEFAULT_SCOPE,
     dotenvPath: DEFAULT_DOTENV_PATH,
+    explicitDotenvPath: false,
     writeEnv: false,
     fixPermissions: false,
     noOpen: false,
@@ -171,6 +186,7 @@ function parseArgs(argv: string[]): CliConfig {
 
       case "--dotenv":
         config.dotenvPath = argv[++index] ?? DEFAULT_DOTENV_PATH;
+        config.explicitDotenvPath = true;
         break;
 
       case "--user-agent":
@@ -202,11 +218,6 @@ function parseArgs(argv: string[]): CliConfig {
     }
   }
 
-  config.clientId ??= process.env.REDDIT_CLIENT_ID;
-  config.clientSecret ??= process.env.REDDIT_CLIENT_SECRET;
-  config.userAgent ??= process.env.REDDIT_USER_AGENT;
-  config.subreddit ??= process.env.REDDIT_SUBREDDIT;
-
   if (!Number.isInteger(config.redirectPort) || config.redirectPort <= 0) {
     throw new Error("--port must be a positive integer.");
   }
@@ -221,25 +232,80 @@ function parseArgs(argv: string[]): CliConfig {
     );
   }
 
-  if (!config.clientId) {
-    throw new Error("Missing --client-id or REDDIT_CLIENT_ID.");
-  }
-
-  if (!config.clientSecret) {
-    throw new Error("Missing --client-secret or REDDIT_CLIENT_SECRET.");
-  }
-
-  if (!config.userAgent) {
-    throw new Error(
-      "Missing --user-agent or REDDIT_USER_AGENT. Use a descriptive value such as posthaste-prepare-link/1.0 by u/yourname.",
-    );
-  }
-
   if (!Number.isFinite(config.timeoutMs) || config.timeoutMs <= 0) {
     throw new Error("--timeout-ms must be a positive number.");
   }
 
   return config;
+}
+
+async function loadRuntimeConfig(
+  config: CliConfig,
+): Promise<ResolvedPosthasteConfig> {
+  const runtimeConfig = await loadPosthasteConfig({
+    defaults: {
+      paths: {
+        dotenv: DEFAULT_DOTENV_PATH,
+      },
+      networks: {
+        reddit: {
+          enabled: true,
+          env: REDDIT_ENV_DEFAULTS,
+        },
+      },
+    },
+    cli: config.explicitDotenvPath
+      ? {
+          paths: {
+            dotenv: config.dotenvPath,
+          },
+        }
+      : undefined,
+    knownNetworks: POSTHASTE_SHARED_NETWORKS,
+  });
+
+  config.dotenvPath = runtimeConfig.paths.dotenv;
+  config.clientId ??=
+    process.env[
+      envNameFor(runtimeConfig, "reddit", "client_id", "REDDIT_CLIENT_ID")
+    ];
+  config.clientSecret ??=
+    process.env[
+      envNameFor(
+        runtimeConfig,
+        "reddit",
+        "client_secret",
+        "REDDIT_CLIENT_SECRET",
+      )
+    ];
+  config.userAgent ??=
+    process.env[
+      envNameFor(runtimeConfig, "reddit", "user_agent", "REDDIT_USER_AGENT")
+    ];
+  config.subreddit ??=
+    process.env[
+      envNameFor(runtimeConfig, "reddit", "subreddit", "REDDIT_SUBREDDIT")
+    ];
+
+  if (!config.clientId) {
+    throw new Error(
+      `Missing --client-id or ${envNameFor(runtimeConfig, "reddit", "client_id", "REDDIT_CLIENT_ID")}.`,
+    );
+  }
+
+  if (!config.clientSecret) {
+    throw new Error(
+      `Missing --client-secret or ${envNameFor(runtimeConfig, "reddit", "client_secret", "REDDIT_CLIENT_SECRET")}.`,
+    );
+  }
+
+  if (!config.userAgent) {
+    throw new Error(
+      `Missing --user-agent or ${envNameFor(runtimeConfig, "reddit", "user_agent", "REDDIT_USER_AGENT")}. Use a descriptive value such as posthaste-prepare-link/1.0 by u/yourname.`,
+    );
+  }
+
+  return runtimeConfig;
 }
 
 function normaliseCallbackPath(input: string): string {
@@ -545,12 +611,13 @@ function shellQuote(value: string): string {
 
 function updateDotenvContent(
   content: string,
-  values: Partial<Record<(typeof ENV_KEYS)[number], string>>,
+  values: Partial<Record<string, string>>,
+  envKeys: readonly string[],
 ): string {
   const lines = content.length > 0 ? content.split("\n") : [];
   const seen = new Set<string>();
   const updated = lines.map((line) => {
-    for (const key of ENV_KEYS) {
+    for (const key of envKeys) {
       if (values[key] === undefined) {
         continue;
       }
@@ -566,7 +633,7 @@ function updateDotenvContent(
     return line;
   });
 
-  for (const key of ENV_KEYS) {
+  for (const key of envKeys) {
     const value = values[key];
 
     if (value !== undefined && !seen.has(key)) {
@@ -579,8 +646,9 @@ function updateDotenvContent(
 
 async function writeDotenvValues(
   dotenvPath: string,
-  values: Partial<Record<(typeof ENV_KEYS)[number], string>>,
+  values: Partial<Record<string, string>>,
   fixPermissions: boolean,
+  envKeys: readonly string[] = ENV_KEYS,
 ): Promise<void> {
   const resolved = resolve(expandHomePath(dotenvPath));
   await assertPrivateDotenv(resolved, fixPermissions);
@@ -603,7 +671,7 @@ async function writeDotenvValues(
     }
   }
 
-  const next = updateDotenvContent(existing, values);
+  const next = updateDotenvContent(existing, values, envKeys);
   const tempPath = `${resolved}.${process.pid}.tmp`;
   await writeFile(tempPath, next, { encoding: "utf8", mode: 0o600 });
   await chmod(tempPath, 0o600);
@@ -613,6 +681,7 @@ async function writeDotenvValues(
 
 async function main(): Promise<void> {
   const config = parseArgs(process.argv.slice(2));
+  const runtimeConfig = await loadRuntimeConfig(config);
   const redirectUrl = assertLoopbackRedirect(config.redirectUri);
   const state = randomBytes(24).toString("base64url");
   const authorizationUrl = buildAuthorizationUrl(config, state);
@@ -638,25 +707,51 @@ async function main(): Promise<void> {
 
   const code = await authorizationServer.code;
   const token = await exchangeCodeForRefreshToken(config, code);
+  const savedKeys = [
+    envNameFor(runtimeConfig, "reddit", "client_id", "REDDIT_CLIENT_ID"),
+    envNameFor(
+      runtimeConfig,
+      "reddit",
+      "client_secret",
+      "REDDIT_CLIENT_SECRET",
+    ),
+    envNameFor(
+      runtimeConfig,
+      "reddit",
+      "refresh_token",
+      "REDDIT_REFRESH_TOKEN",
+    ),
+    envNameFor(runtimeConfig, "reddit", "user_agent", "REDDIT_USER_AGENT"),
+    config.subreddit
+      ? envNameFor(runtimeConfig, "reddit", "subreddit", "REDDIT_SUBREDDIT")
+      : undefined,
+  ].filter((key): key is string => typeof key === "string");
+
   await writeDotenvValues(
     config.dotenvPath,
     {
-      REDDIT_CLIENT_ID: config.clientId,
-      REDDIT_CLIENT_SECRET: config.clientSecret,
-      REDDIT_REFRESH_TOKEN: token.refreshToken,
-      REDDIT_USER_AGENT: config.userAgent,
-      REDDIT_SUBREDDIT: config.subreddit,
+      [envNameFor(runtimeConfig, "reddit", "client_id", "REDDIT_CLIENT_ID")]:
+        config.clientId,
+      [envNameFor(
+        runtimeConfig,
+        "reddit",
+        "client_secret",
+        "REDDIT_CLIENT_SECRET",
+      )]: config.clientSecret,
+      [envNameFor(
+        runtimeConfig,
+        "reddit",
+        "refresh_token",
+        "REDDIT_REFRESH_TOKEN",
+      )]: token.refreshToken,
+      [envNameFor(runtimeConfig, "reddit", "user_agent", "REDDIT_USER_AGENT")]:
+        config.userAgent,
+      [envNameFor(runtimeConfig, "reddit", "subreddit", "REDDIT_SUBREDDIT")]:
+        config.subreddit,
     },
     config.fixPermissions,
+    savedKeys,
   );
-
-  const savedKeys = [
-    "REDDIT_CLIENT_ID",
-    "REDDIT_CLIENT_SECRET",
-    "REDDIT_REFRESH_TOKEN",
-    "REDDIT_USER_AGENT",
-    config.subreddit ? "REDDIT_SUBREDDIT" : undefined,
-  ].filter(Boolean);
 
   console.log(
     `Stored Reddit OAuth values in ${resolve(expandHomePath(config.dotenvPath))}.`,

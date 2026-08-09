@@ -72,9 +72,19 @@ its JSON result, and record the posted URL. The coordinator invokes these
 direct scripts with `node` so they do not depend on a globally installed
 `tsx`.
 
-Use configured networks from the environment. The helper reads the current
-process environment and the configured dotenv file, defaulting to `~/.env` via
-`CROSSPOST_DOTENV`.
+Use configured networks from the resolved Posthaste TOML configuration plus the
+environment. The helper loads built-in skill defaults, then overlays
+`~/.config/posthaste/config.toml`, the current project `.posthaste.toml`,
+environment-specific overrides such as `CROSSPOST_DOTENV`, and finally explicit
+CLI arguments. If `[posting].default_networks` is configured, `post` targets
+those networks by default. If it is not configured, the historical behaviour is
+preserved: the helper targets supported networks that have the required
+environment values available. An explicit `--to` list overrides
+`[posting].default_networks`.
+
+The helper reads credentials only from the current process environment and the
+configured dotenv file. TOML `[networks.<network>.env]` values are environment
+variable names, not credential values.
 
 ## Info command
 
@@ -88,9 +98,13 @@ node skills/posthaste-prepare-link/resources/post-crosspost.ts --info
 
 The info output must include:
 
+* global and project config paths and whether each file exists
 * the effective dotenv path
 * the posted log path and whether it exists
+* effective default networks and provenance where available
 * configured supported networks
+* network enabled or disabled state
+* effective environment variable names
 * supported network settings: transport, Crosspost flag when applicable,
   direct script when applicable, required environment variable option groups,
   missing environment variable names, character limit, image support,
@@ -366,7 +380,9 @@ Never publish without explicit confirmation.
 ## Publishing
 
 The CLI session is expected to expose whichever environment variables are
-needed for the configured target networks:
+needed for the configured target networks. These are the built-in default
+environment variable names; TOML may override the names under
+`[networks.<network>.env]`:
 
 ```text
 MASTODON_ACCESS_TOKEN
@@ -397,7 +413,15 @@ TUMBLR_BLOG_IDENTIFIER
 ```
 
 The resource script defaults `CROSSPOST_DOTENV` to `~/.env` when the variable
-is not already set.
+is not already set. The TOML key `[paths].dotenv` can set the default dotenv
+path, `CROSSPOST_DOTENV` overrides it for Crosspost-compatible invocations, and
+the explicit `--dotenv` argument overrides both.
+
+The TOML key `[paths].posted_log` controls the posted-log path used by
+`post-crosspost.ts` and `check-posted-log.ts`; explicit `--log-path` overrides
+it. If `[posting].default_networks` names a network disabled with
+`[networks.<network>].enabled = false`, the runtime treats that as invalid
+configuration and exits before publishing.
 
 For Reddit, either provide a current `REDDIT_ACCESS_TOKEN` plus
 `REDDIT_USER_AGENT` and `REDDIT_SUBREDDIT`, or provide

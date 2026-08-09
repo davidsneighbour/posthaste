@@ -2,19 +2,29 @@
 
 import { readFile } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
+import type { ResolvedPosthasteConfig } from "../../posthaste-config/resources/config.ts";
 import {
   asRecord,
   type CommonDirectConfig,
   expandHomePath,
   fetchJson,
   firstString,
+  getConfiguredEnvValue,
+  loadDirectRuntimeConfig,
   printJson,
-  readDotenv,
   readMessage,
-  requireEnvValue,
+  requireConfiguredEnvValue,
 } from "./direct-api-utils.ts";
 
 const DEFAULT_DOTENV_PATH = "~/.env";
+const TUMBLR_DEFAULTS = {
+  enabled: true,
+  env: {
+    access_token: "TUMBLR_ACCESS_TOKEN",
+    access_token_expires_at: "TUMBLR_ACCESS_TOKEN_EXPIRES_AT",
+    blog_identifier: "TUMBLR_BLOG_IDENTIFIER",
+  },
+};
 
 const IMAGE_MIME_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -62,6 +72,7 @@ function requireArg(argv: string[], index: number, flag: string): string {
 function parseArgs(argv: string[]): TumblrConfig {
   const config: TumblrConfig = {
     dotenvPath: DEFAULT_DOTENV_PATH,
+    explicitDotenvPath: false,
     dryRun: false,
   };
   let index = 0;
@@ -98,6 +109,7 @@ function parseArgs(argv: string[]): TumblrConfig {
 
       case "--dotenv":
         config.dotenvPath = nextValue(arg);
+        config.explicitDotenvPath = true;
         break;
 
       case "--dry-run":
@@ -113,9 +125,16 @@ function parseArgs(argv: string[]): TumblrConfig {
 }
 
 function assertTumblrTokenNotExpired(
+  config: ResolvedPosthasteConfig,
   dotenvValues: Record<string, string>,
 ): void {
-  const expiresAt = dotenvValues.TUMBLR_ACCESS_TOKEN_EXPIRES_AT;
+  const expiresAt = getConfiguredEnvValue(
+    config,
+    "tumblr",
+    "access_token_expires_at",
+    "TUMBLR_ACCESS_TOKEN_EXPIRES_AT",
+    dotenvValues,
+  );
 
   if (!expiresAt) {
     return;
@@ -194,34 +213,47 @@ async function buildMultipartRequest(
 }
 
 async function postTumblr(): Promise<void> {
-  const config = parseArgs(process.argv.slice(2));
-  const message = await readMessage(config);
-  const dotenvValues = await readDotenv(config.dotenvPath);
+  const cliConfig = parseArgs(process.argv.slice(2));
+  const message = await readMessage(cliConfig);
+  const runtime = await loadDirectRuntimeConfig(
+    cliConfig,
+    "tumblr",
+    TUMBLR_DEFAULTS,
+  );
 
-  if (config.imagePath && !config.imageAlt) {
+  if (cliConfig.imagePath && !cliConfig.imageAlt) {
     throw new Error("--image-alt is required when --image is used.");
   }
 
-  if (config.dryRun) {
+  if (cliConfig.dryRun) {
     printJson({
       network: "tumblr",
       dryRun: true,
       characters: [...message].length,
-      image: config.imagePath,
+      image: cliConfig.imagePath,
     });
     return;
   }
 
-  const accessToken = requireEnvValue("TUMBLR_ACCESS_TOKEN", dotenvValues);
-  const blogIdentifier = requireEnvValue(
-    "TUMBLR_BLOG_IDENTIFIER",
-    dotenvValues,
+  const accessToken = requireConfiguredEnvValue(
+    runtime.config,
+    "tumblr",
+    "access_token",
+    "TUMBLR_ACCESS_TOKEN",
+    runtime.dotenvValues,
   );
-  assertTumblrTokenNotExpired(dotenvValues);
-  const content = buildContentBlocks(message, config);
+  const blogIdentifier = requireConfiguredEnvValue(
+    runtime.config,
+    "tumblr",
+    "blog_identifier",
+    "TUMBLR_BLOG_IDENTIFIER",
+    runtime.dotenvValues,
+  );
+  assertTumblrTokenNotExpired(runtime.config, runtime.dotenvValues);
+  const content = buildContentBlocks(message, cliConfig);
   const postBody = { content, state: "published" };
-  const requestInit: RequestInit = config.imagePath
-    ? await buildMultipartRequest(postBody, config.imagePath, accessToken)
+  const requestInit: RequestInit = cliConfig.imagePath
+    ? await buildMultipartRequest(postBody, cliConfig.imagePath, accessToken)
     : {
         method: "POST",
         headers: {
@@ -235,7 +267,7 @@ async function postTumblr(): Promise<void> {
       `https://api.tumblr.com/v2/blog/${encodeURIComponent(blogIdentifier)}/posts`,
       requestInit,
       "Tumblr post creation",
-      dotenvValues,
+      runtime.dotenvValues,
     ),
   );
   const response = asRecord(json.response);

@@ -2,12 +2,25 @@ import { constants as fsConstants } from "node:fs";
 import { access, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import {
+  loadPosthasteConfig,
+  type NetworkConfigDefaults,
+  POSTHASTE_SHARED_NETWORKS,
+  type ResolvedPosthasteConfig,
+} from "../../posthaste-config/resources/config.ts";
 
 export interface CommonDirectConfig {
   message?: string;
   messageFile?: string;
   dotenvPath: string;
+  explicitDotenvPath?: boolean;
   dryRun: boolean;
+}
+
+export interface DirectRuntimeConfig {
+  config: ResolvedPosthasteConfig;
+  dotenvPath: string;
+  dotenvValues: Record<string, string>;
 }
 
 export function expandHomePath(input: string): string {
@@ -87,6 +100,28 @@ export function getEnvValue(
   return process.env[name] || dotenvValues[name];
 }
 
+export function getConfiguredEnvName(
+  config: ResolvedPosthasteConfig,
+  network: string,
+  semanticKey: string,
+  fallback: string,
+): string {
+  return config.networks[network]?.env[semanticKey] ?? fallback;
+}
+
+export function getConfiguredEnvValue(
+  config: ResolvedPosthasteConfig,
+  network: string,
+  semanticKey: string,
+  fallback: string,
+  dotenvValues: Record<string, string>,
+): string | undefined {
+  return getEnvValue(
+    getConfiguredEnvName(config, network, semanticKey, fallback),
+    dotenvValues,
+  );
+}
+
 export function requireEnvValue(
   name: string,
   dotenvValues: Record<string, string>,
@@ -98,6 +133,54 @@ export function requireEnvValue(
   }
 
   return value;
+}
+
+export function requireConfiguredEnvValue(
+  config: ResolvedPosthasteConfig,
+  network: string,
+  semanticKey: string,
+  fallback: string,
+  dotenvValues: Record<string, string>,
+): string {
+  const envName = getConfiguredEnvName(config, network, semanticKey, fallback);
+  const value = getEnvValue(envName, dotenvValues);
+
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${envName}`);
+  }
+
+  return value;
+}
+
+export async function loadDirectRuntimeConfig(
+  cliConfig: CommonDirectConfig,
+  network: string,
+  networkDefaults: NetworkConfigDefaults,
+): Promise<DirectRuntimeConfig> {
+  const config = await loadPosthasteConfig({
+    defaults: {
+      paths: {
+        dotenv: cliConfig.dotenvPath,
+      },
+      networks: {
+        [network]: networkDefaults,
+      },
+    },
+    cli: cliConfig.explicitDotenvPath
+      ? {
+          paths: {
+            dotenv: cliConfig.dotenvPath,
+          },
+        }
+      : undefined,
+    knownNetworks: POSTHASTE_SHARED_NETWORKS,
+  });
+  const dotenvPath = cliConfig.explicitDotenvPath
+    ? cliConfig.dotenvPath
+    : config.paths.dotenv;
+  const dotenvValues = await readDotenv(dotenvPath);
+
+  return { config, dotenvPath, dotenvValues };
 }
 
 export async function readMessage(config: CommonDirectConfig): Promise<string> {

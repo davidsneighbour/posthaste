@@ -110,6 +110,32 @@ example_setting = "value"
 
 Do not require every skill to use `[skills.*]` when a shared section is clearer.
 
+## Runtime behaviour
+
+The TypeScript runtime loader lives at:
+
+```text
+skills/posthaste-config/resources/config.ts
+```
+
+Executable TypeScript scripts should import that module rather than duplicating
+TOML parsing, config discovery, merge logic, provenance handling, or shared
+validation.
+
+The current runtime supports these shared keys:
+
+* `version`
+* `[posting].default_networks`
+* `[paths].dotenv`
+* `[paths].posted_log`
+* `[networks.<network>].enabled`
+* `[networks.<network>.env].*`
+
+`posthaste-prepare-link` treats a default network that is disabled by
+`[networks.<network>].enabled = false` as invalid configuration. This makes a
+contradictory configuration fail before publishing instead of silently narrowing
+the target set.
+
 ## Secret safety
 
 TOML configuration MUST NOT contain credential values.
@@ -254,7 +280,7 @@ Do not store questionnaire answers in agent memory as a substitute for writing
 the requested config. Agent memory may help draft prose or recall preferences,
 but operational Posthaste defaults come from explicit configuration.
 
-## Use from other Posthaste skills
+## Use from other posthaste skills
 
 A consuming skill should use this sequence:
 

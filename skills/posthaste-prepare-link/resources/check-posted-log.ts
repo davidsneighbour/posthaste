@@ -2,13 +2,18 @@
 
 import { constants as fsConstants } from "node:fs";
 import { access, readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
+import {
+  expandHomePath,
+  loadPosthasteConfig,
+  type PosthasteConfigDefaults,
+} from "../../posthaste-config/resources/config.ts";
 
 interface CliConfig {
   url?: string;
   targetNetworks: Network[];
   logPath: string;
+  explicitLogPath: boolean;
 }
 
 type Network =
@@ -45,6 +50,11 @@ const SUPPORTED_NETWORKS = [
   "threads",
   "tumblr",
 ] as const;
+const CHECK_POSTED_LOG_DEFAULTS: PosthasteConfigDefaults = {
+  paths: {
+    postedLog: DEFAULT_LOG_PATH,
+  },
+};
 
 function printHelp(): void {
   console.log(`
@@ -62,18 +72,6 @@ Options:
 Output:
   JSON on stdout: { alreadyPosted: boolean, postedNetworks: string[], ... }
 `);
-}
-
-function expandHomePath(input: string): string {
-  if (input === "~") {
-    return homedir();
-  }
-
-  if (input.startsWith("~/")) {
-    return join(homedir(), input.slice(2));
-  }
-
-  return input;
 }
 
 function normaliseUrl(value: string): string {
@@ -112,7 +110,11 @@ function parseNetworks(value: string): Network[] {
 }
 
 function parseArgs(argv: string[]): CliConfig {
-  const config: CliConfig = { logPath: DEFAULT_LOG_PATH, targetNetworks: [] };
+  const config: CliConfig = {
+    logPath: DEFAULT_LOG_PATH,
+    explicitLogPath: false,
+    targetNetworks: [],
+  };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -134,6 +136,7 @@ function parseArgs(argv: string[]): CliConfig {
 
       case "--log-path":
         config.logPath = argv[++index] ?? DEFAULT_LOG_PATH;
+        config.explicitLogPath = true;
         break;
 
       default:
@@ -185,7 +188,18 @@ function hasPostedNetwork(record: PostedRecord, network: Network): boolean {
 
 async function main(): Promise<void> {
   const config = parseArgs(process.argv.slice(2));
-  const logPath = resolve(expandHomePath(config.logPath));
+  const resolvedConfig = await loadPosthasteConfig({
+    defaults: CHECK_POSTED_LOG_DEFAULTS,
+    cli: config.explicitLogPath
+      ? {
+          paths: {
+            postedLog: config.logPath,
+          },
+        }
+      : undefined,
+    knownNetworks: [...SUPPORTED_NETWORKS],
+  });
+  const logPath = resolve(expandHomePath(resolvedConfig.paths.postedLog));
   const records = await readLog(logPath);
   const target = normaliseUrl(config.url as string);
 

@@ -14,6 +14,12 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  loadPosthasteConfig,
+  type PosthasteConfigDefaults,
+  provenanceFor,
+  type ResolvedPosthasteConfig,
+} from "../../posthaste-config/resources/config.ts";
 
 type Network =
   | "mastodon"
@@ -48,9 +54,11 @@ interface CliConfig {
   image?: string;
   imageAlt?: string;
   dotenvPath: string;
+  explicitDotenvPath: boolean;
   sourceUrl?: string;
   canonicalUrl?: string;
   logPath: string;
+  explicitLogPath: boolean;
   noLog: boolean;
   dryRun: boolean;
   force: boolean;
@@ -90,7 +98,7 @@ const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
   mastodon: {
     transport: "crosspost",
     flag: "--mastodon",
-    requiredEnv: ["MASTODON_ACCESS_TOKEN", "MASTODON_HOST"],
+    requiredEnv: ["access_token", "host"],
     maxChars: 1000,
     supportsImages: true,
     description: "Crosspost Mastodon status with optional image attachment.",
@@ -98,7 +106,7 @@ const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
   bluesky: {
     transport: "crosspost",
     flag: "--bluesky",
-    requiredEnv: ["BLUESKY_HOST", "BLUESKY_IDENTIFIER", "BLUESKY_PASSWORD"],
+    requiredEnv: ["host", "identifier", "password"],
     maxChars: 300,
     supportsImages: true,
     description: "Crosspost Bluesky post with optional image attachment.",
@@ -106,7 +114,7 @@ const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
   linkedin: {
     transport: "crosspost",
     flag: "--linkedin",
-    requiredEnv: ["LINKEDIN_ACCESS_TOKEN"],
+    requiredEnv: ["access_token"],
     maxChars: 3000,
     supportsImages: true,
     description: "Crosspost LinkedIn share with optional image attachment.",
@@ -114,7 +122,7 @@ const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
   nostr: {
     transport: "crosspost",
     flag: "--nostr",
-    requiredEnv: ["NOSTR_PRIVATE_KEY", "NOSTR_RELAYS"],
+    requiredEnv: ["private_key", "relays"],
     maxChars: 280,
     supportsImages: false,
     description: "Crosspost Nostr text note.",
@@ -122,18 +130,14 @@ const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
   reddit: {
     transport: "direct",
     directScript: "post-reddit.ts",
-    requiredEnv: [
-      "REDDIT_ACCESS_TOKEN",
-      "REDDIT_USER_AGENT",
-      "REDDIT_SUBREDDIT",
-    ],
+    requiredEnv: ["access_token", "user_agent", "subreddit"],
     alternativeRequiredEnv: [
       [
-        "REDDIT_CLIENT_ID",
-        "REDDIT_CLIENT_SECRET",
-        "REDDIT_REFRESH_TOKEN",
-        "REDDIT_USER_AGENT",
-        "REDDIT_SUBREDDIT",
+        "client_id",
+        "client_secret",
+        "refresh_token",
+        "user_agent",
+        "subreddit",
       ],
     ],
     maxChars: 40_000,
@@ -144,7 +148,7 @@ const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
   threads: {
     transport: "direct",
     directScript: "post-threads.ts",
-    requiredEnv: ["THREADS_ACCESS_TOKEN", "THREADS_USER_ID"],
+    requiredEnv: ["access_token", "user_id"],
     maxChars: 500,
     supportsImages: false,
     description:
@@ -153,7 +157,7 @@ const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
   tumblr: {
     transport: "direct",
     directScript: "post-tumblr.ts",
-    requiredEnv: ["TUMBLR_ACCESS_TOKEN", "TUMBLR_BLOG_IDENTIFIER"],
+    requiredEnv: ["access_token", "blog_identifier"],
     maxChars: 4096,
     supportsImages: true,
     description:
@@ -170,6 +174,59 @@ const CROSSPOST_NETWORKS = (
 const DIRECT_NETWORKS = (Object.keys(SUPPORTED_NETWORKS) as Network[]).filter(
   (network) => SUPPORTED_NETWORKS[network].transport === "direct",
 );
+const DEFAULT_NETWORK_ENV: Record<Network, Record<string, string>> = {
+  mastodon: {
+    access_token: "MASTODON_ACCESS_TOKEN",
+    host: "MASTODON_HOST",
+  },
+  bluesky: {
+    host: "BLUESKY_HOST",
+    identifier: "BLUESKY_IDENTIFIER",
+    password: "BLUESKY_PASSWORD",
+  },
+  linkedin: {
+    access_token: "LINKEDIN_ACCESS_TOKEN",
+  },
+  nostr: {
+    private_key: "NOSTR_PRIVATE_KEY",
+    relays: "NOSTR_RELAYS",
+  },
+  reddit: {
+    access_token: "REDDIT_ACCESS_TOKEN",
+    client_id: "REDDIT_CLIENT_ID",
+    client_secret: "REDDIT_CLIENT_SECRET",
+    flair_id: "REDDIT_FLAIR_ID",
+    refresh_token: "REDDIT_REFRESH_TOKEN",
+    subreddit: "REDDIT_SUBREDDIT",
+    user_agent: "REDDIT_USER_AGENT",
+  },
+  threads: {
+    access_token: "THREADS_ACCESS_TOKEN",
+    access_token_expires_at: "THREADS_ACCESS_TOKEN_EXPIRES_AT",
+    user_id: "THREADS_USER_ID",
+    username: "THREADS_USERNAME",
+  },
+  tumblr: {
+    access_token: "TUMBLR_ACCESS_TOKEN",
+    access_token_expires_at: "TUMBLR_ACCESS_TOKEN_EXPIRES_AT",
+    blog_identifier: "TUMBLR_BLOG_IDENTIFIER",
+  },
+};
+const PREPARE_LINK_DEFAULTS: PosthasteConfigDefaults = {
+  paths: {
+    dotenv: DEFAULT_DOTENV_PATH,
+    postedLog: DEFAULT_LOG_PATH,
+  },
+  networks: Object.fromEntries(
+    (Object.keys(SUPPORTED_NETWORKS) as Network[]).map((network) => [
+      network,
+      {
+        enabled: true,
+        env: DEFAULT_NETWORK_ENV[network],
+      },
+    ]),
+  ),
+};
 
 function printHelp(): void {
   console.log(`
@@ -253,16 +310,46 @@ function expandHomePath(input: string): string {
   return input;
 }
 
-function getEffectiveDotenvPath(config: CliConfig): string {
-  if (!process.env.CROSSPOST_DOTENV) {
-    return config.dotenvPath;
-  }
+async function resolveRuntimeConfig(
+  config: CliConfig,
+): Promise<ResolvedPosthasteConfig> {
+  return loadPosthasteConfig({
+    defaults: PREPARE_LINK_DEFAULTS,
+    environment: process.env.CROSSPOST_DOTENV
+      ? {
+          paths: {
+            dotenv:
+              process.env.CROSSPOST_DOTENV === "1"
+                ? ".env"
+                : process.env.CROSSPOST_DOTENV,
+          },
+        }
+      : undefined,
+    cli: {
+      ...(config.explicitDotenvPath
+        ? { paths: { dotenv: config.dotenvPath } }
+        : {}),
+      ...(config.explicitLogPath
+        ? { paths: { postedLog: config.logPath } }
+        : {}),
+      ...(config.targetNetworks.length > 0
+        ? { posting: { defaultNetworks: config.targetNetworks } }
+        : {}),
+    },
+    knownNetworks: Object.keys(SUPPORTED_NETWORKS),
+  });
+}
 
-  if (process.env.CROSSPOST_DOTENV === "1") {
-    return ".env";
-  }
-
-  return process.env.CROSSPOST_DOTENV;
+function configuredEnvName(
+  config: ResolvedPosthasteConfig,
+  network: Network,
+  semanticKey: string,
+): string {
+  return (
+    config.networks[network]?.env[semanticKey] ??
+    DEFAULT_NETWORK_ENV[network][semanticKey] ??
+    semanticKey
+  );
 }
 
 function normaliseUrl(value: string): string {
@@ -325,7 +412,9 @@ function parseArgs(argv: string[]): CliConfig {
     networkMessageFiles: {},
     targetNetworks: [],
     dotenvPath: DEFAULT_DOTENV_PATH,
+    explicitDotenvPath: false,
     logPath: DEFAULT_LOG_PATH,
+    explicitLogPath: false,
     redditNoComment: false,
     noLog: false,
     dryRun: false,
@@ -418,6 +507,7 @@ function parseArgs(argv: string[]): CliConfig {
 
       case "--dotenv":
         config.dotenvPath = nextValue(arg);
+        config.explicitDotenvPath = true;
         break;
 
       case "--source-url":
@@ -430,6 +520,7 @@ function parseArgs(argv: string[]): CliConfig {
 
       case "--log-path":
         config.logPath = nextValue(arg);
+        config.explicitLogPath = true;
         break;
 
       case "--force":
@@ -537,11 +628,18 @@ function envHasValue(
   return Boolean(process.env[name] || dotenvValues[name]);
 }
 
-function envRequirementGroups(networkConfig: NetworkConfig): string[][] {
+function envRequirementGroups(
+  config: ResolvedPosthasteConfig,
+  network: Network,
+): string[][] {
+  const networkConfig = SUPPORTED_NETWORKS[network];
+
   return [
     networkConfig.requiredEnv,
     ...(networkConfig.alternativeRequiredEnv ?? []),
-  ];
+  ].map((group) =>
+    group.map((semanticKey) => configuredEnvName(config, network, semanticKey)),
+  );
 }
 
 function missingEnvForGroup(
@@ -552,10 +650,11 @@ function missingEnvForGroup(
 }
 
 function bestMissingEnv(
-  networkConfig: NetworkConfig,
+  config: ResolvedPosthasteConfig,
+  network: Network,
   dotenvValues: Record<string, string>,
 ): string[] {
-  const missingGroups = envRequirementGroups(networkConfig).map((group) =>
+  const missingGroups = envRequirementGroups(config, network).map((group) =>
     missingEnvForGroup(group, dotenvValues),
   );
 
@@ -563,19 +662,23 @@ function bestMissingEnv(
 }
 
 function isNetworkConfigured(
-  networkConfig: NetworkConfig,
+  config: ResolvedPosthasteConfig,
+  network: Network,
   dotenvValues: Record<string, string>,
 ): boolean {
-  return envRequirementGroups(networkConfig).some(
+  return envRequirementGroups(config, network).some(
     (group) => missingEnvForGroup(group, dotenvValues).length === 0,
   );
 }
 
 function getConfiguredNetworks(
+  config: ResolvedPosthasteConfig,
   dotenvValues: Record<string, string>,
 ): Network[] {
-  return (Object.keys(SUPPORTED_NETWORKS) as Network[]).filter((network) =>
-    isNetworkConfigured(SUPPORTED_NETWORKS[network], dotenvValues),
+  return (Object.keys(SUPPORTED_NETWORKS) as Network[]).filter(
+    (network) =>
+      config.networks[network]?.enabled !== false &&
+      isNetworkConfigured(config, network, dotenvValues),
   );
 }
 
@@ -589,21 +692,27 @@ async function fileExists(filePath: string): Promise<boolean> {
 }
 
 async function printInfo(
-  config: CliConfig,
-  effectiveDotenvPath: string,
+  cliConfig: CliConfig,
+  config: ResolvedPosthasteConfig,
   dotenvValues: Record<string, string>,
 ): Promise<void> {
-  const logPath = resolve(expandHomePath(config.logPath));
-  const dotenvPath = resolve(expandHomePath(effectiveDotenvPath));
-  const configuredNetworks = getConfiguredNetworks(dotenvValues);
+  const logPath = resolve(expandHomePath(config.paths.postedLog));
+  const dotenvPath = resolve(expandHomePath(config.paths.dotenv));
+  const configuredNetworks = getConfiguredNetworks(config, dotenvValues);
   const networkInfo = Object.fromEntries(
     (Object.keys(SUPPORTED_NETWORKS) as Network[]).map((network) => {
       const networkConfig = SUPPORTED_NETWORKS[network];
-      const missingEnv = bestMissingEnv(networkConfig, dotenvValues);
+      const missingEnv = bestMissingEnv(config, network, dotenvValues);
+      const env = config.networks[network]?.env ?? {};
 
       return [
         network,
         {
+          enabled: config.networks[network]?.enabled !== false,
+          enabledProvenance: provenanceFor(
+            config,
+            `networks.${network}.enabled`,
+          ),
           configured: missingEnv.length === 0,
           transport: networkConfig.transport,
           flag: networkConfig.flag,
@@ -611,7 +720,14 @@ async function printInfo(
           maxChars: networkConfig.maxChars,
           supportsImages: networkConfig.supportsImages,
           description: networkConfig.description,
-          requiredEnvOptions: envRequirementGroups(networkConfig),
+          env,
+          envProvenance: Object.fromEntries(
+            Object.keys(env).map((key) => [
+              key,
+              provenanceFor(config, `networks.${network}.env.${key}`),
+            ]),
+          ),
+          requiredEnvOptions: envRequirementGroups(config, network),
           missingEnv,
           networkSpecificDraftSuffix: `.${network}.md`,
         },
@@ -622,9 +738,25 @@ async function printInfo(
   console.log(
     JSON.stringify(
       {
+        globalConfigPath: config.sources.globalConfigPath,
+        globalConfigPresent: config.sources.globalConfigPresent,
+        projectConfigPath: config.sources.projectConfigPath,
+        projectConfigPresent: config.sources.projectConfigPresent,
+        warnings: config.warnings,
         dotenvPath,
+        dotenvPathProvenance: provenanceFor(config, "paths.dotenv"),
         logPath,
+        logPathProvenance: provenanceFor(config, "paths.posted_log"),
         logExists: await fileExists(logPath),
+        effectiveDefaultNetworks: config.posting.defaultNetworks,
+        effectiveDefaultNetworksProvenance: provenanceFor(
+          config,
+          "posting.default_networks",
+        ),
+        cliSelectedNetworks:
+          cliConfig.targetNetworks.length > 0
+            ? cliConfig.targetNetworks
+            : undefined,
         configuredNetworks,
         supportedNetworks: networkInfo,
         crosspostNetworks: CROSSPOST_NETWORKS,
@@ -643,12 +775,23 @@ async function printInfo(
 }
 
 function validateNetworkConfiguration(
+  config: ResolvedPosthasteConfig,
   networks: Network[],
   dotenvValues: Record<string, string>,
 ): void {
+  const disabled = networks.filter(
+    (network) => config.networks[network]?.enabled === false,
+  );
+
+  if (disabled.length > 0) {
+    throw new Error(
+      `Requested network is disabled by Posthaste config: ${disabled.join(", ")}`,
+    );
+  }
+
   const missingByNetwork = networks
     .map((network) => {
-      const missing = bestMissingEnv(SUPPORTED_NETWORKS[network], dotenvValues);
+      const missing = bestMissingEnv(config, network, dotenvValues);
       return { network, missing };
     })
     .filter(({ missing }) => missing.length > 0);
@@ -1093,19 +1236,29 @@ function directResultUrl(result: DirectScriptResult): string {
 
 async function main(): Promise<void> {
   const config = parseArgs(process.argv.slice(2));
-  const effectiveDotenvPath = getEffectiveDotenvPath(config);
+  const resolvedConfig = await resolveRuntimeConfig(config);
+  const effectiveDotenvPath = resolvedConfig.paths.dotenv;
   const dotenvValues = await readDotenv(effectiveDotenvPath);
 
   if (config.info) {
-    await printInfo(config, effectiveDotenvPath, dotenvValues);
+    await printInfo(config, resolvedConfig, dotenvValues);
     return;
   }
 
-  const configuredNetworks = getConfiguredNetworks(dotenvValues);
+  const configuredNetworks = getConfiguredNetworks(
+    resolvedConfig,
+    dotenvValues,
+  );
+  const configuredDefaultNetworks =
+    provenanceFor(resolvedConfig, "posting.default_networks") === "default"
+      ? []
+      : (resolvedConfig.posting.defaultNetworks as Network[]);
   const selectedNetworks =
     config.targetNetworks.length > 0
       ? config.targetNetworks
-      : configuredNetworks;
+      : configuredDefaultNetworks.length > 0
+        ? configuredDefaultNetworks
+        : configuredNetworks;
 
   if (selectedNetworks.length === 0) {
     throw new Error(
@@ -1113,10 +1266,11 @@ async function main(): Promise<void> {
     );
   }
 
-  validateNetworkConfiguration(selectedNetworks, dotenvValues);
+  validateNetworkConfiguration(resolvedConfig, selectedNetworks, dotenvValues);
   await validateImage(config);
 
-  const logPath = resolve(expandHomePath(config.logPath));
+  const logPath = resolve(expandHomePath(resolvedConfig.paths.postedLog));
+  config.logPath = resolvedConfig.paths.postedLog;
   const records = await readLog(logPath);
   const loggedNetworks = config.force
     ? []

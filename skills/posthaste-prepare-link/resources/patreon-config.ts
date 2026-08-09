@@ -1,12 +1,25 @@
 #!/usr/bin/env node
 
-import { getEnvValue, printJson, readDotenv } from "./direct-api-utils.ts";
+import {
+  getConfiguredEnvValue,
+  loadDirectRuntimeConfig,
+  printJson,
+} from "./direct-api-utils.ts";
 
 const DEFAULT_DOTENV_PATH = "~/.env";
 const DEFAULT_LOGIN_URL = "https://www.patreon.com/login";
+const PATREON_DEFAULTS = {
+  enabled: true,
+  env: {
+    dashboard_url: "PATREON_DASHBOARD_URL",
+    login_url: "PATREON_LOGIN_URL",
+  },
+};
 
 interface PatreonConfigConfig {
   dotenvPath: string;
+  explicitDotenvPath: boolean;
+  dryRun: boolean;
 }
 
 function printHelp(): void {
@@ -51,7 +64,11 @@ function requireArg(argv: string[], index: number, flag: string): string {
 }
 
 function parseArgs(argv: string[]): PatreonConfigConfig {
-  const config: PatreonConfigConfig = { dotenvPath: DEFAULT_DOTENV_PATH };
+  const config: PatreonConfigConfig = {
+    dotenvPath: DEFAULT_DOTENV_PATH,
+    explicitDotenvPath: false,
+    dryRun: false,
+  };
   let index = 0;
   const nextValue = (flag: string): string => {
     index += 1;
@@ -70,6 +87,7 @@ function parseArgs(argv: string[]): PatreonConfigConfig {
 
       case "--dotenv":
         config.dotenvPath = nextValue(arg);
+        config.explicitDotenvPath = true;
         break;
 
       default:
@@ -97,16 +115,35 @@ function requireHttpsUrl(value: string, label: string): string {
 }
 
 async function main(): Promise<void> {
-  const config = parseArgs(process.argv.slice(2));
-  const dotenvValues = await readDotenv(config.dotenvPath);
+  const cliConfig = parseArgs(process.argv.slice(2));
+  const runtime = await loadDirectRuntimeConfig(
+    cliConfig,
+    "patreon",
+    PATREON_DEFAULTS,
+  );
 
   const loginUrl = requireHttpsUrl(
-    getEnvValue("PATREON_LOGIN_URL", dotenvValues) ?? DEFAULT_LOGIN_URL,
-    "PATREON_LOGIN_URL",
+    getConfiguredEnvValue(
+      runtime.config,
+      "patreon",
+      "login_url",
+      "PATREON_LOGIN_URL",
+      runtime.dotenvValues,
+    ) ?? DEFAULT_LOGIN_URL,
+    runtime.config.networks.patreon?.env.login_url ?? "PATREON_LOGIN_URL",
   );
-  const dashboardUrlRaw = getEnvValue("PATREON_DASHBOARD_URL", dotenvValues);
+  const dashboardUrlName =
+    runtime.config.networks.patreon?.env.dashboard_url ??
+    "PATREON_DASHBOARD_URL";
+  const dashboardUrlRaw = getConfiguredEnvValue(
+    runtime.config,
+    "patreon",
+    "dashboard_url",
+    "PATREON_DASHBOARD_URL",
+    runtime.dotenvValues,
+  );
   const dashboardUrl = dashboardUrlRaw
-    ? requireHttpsUrl(dashboardUrlRaw, "PATREON_DASHBOARD_URL")
+    ? requireHttpsUrl(dashboardUrlRaw, dashboardUrlName)
     : undefined;
 
   printJson({

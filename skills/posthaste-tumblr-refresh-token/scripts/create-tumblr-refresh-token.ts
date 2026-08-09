@@ -18,6 +18,12 @@ import {
 import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
+import {
+  envNameFor,
+  loadPosthasteConfig,
+  POSTHASTE_SHARED_NETWORKS,
+  type ResolvedPosthasteConfig,
+} from "../../posthaste-config/resources/config.ts";
 
 interface CliConfig {
   consumerKey?: string;
@@ -30,6 +36,7 @@ interface CliConfig {
   scope: string;
   blogIdentifier?: string;
   dotenvPath: string;
+  explicitDotenvPath: boolean;
   writeEnv: boolean;
   refreshExisting: boolean;
   fixPermissions: boolean;
@@ -83,6 +90,14 @@ const ENV_KEYS = [
   "TUMBLR_ACCESS_TOKEN_EXPIRES_AT",
   "TUMBLR_BLOG_IDENTIFIER",
 ] as const;
+const TUMBLR_ENV_DEFAULTS = {
+  access_token: "TUMBLR_ACCESS_TOKEN",
+  access_token_expires_at: "TUMBLR_ACCESS_TOKEN_EXPIRES_AT",
+  blog_identifier: "TUMBLR_BLOG_IDENTIFIER",
+  consumer_key: "TUMBLR_CONSUMER_KEY",
+  consumer_secret: "TUMBLR_CONSUMER_SECRET",
+  refresh_token: "TUMBLR_REFRESH_TOKEN",
+};
 
 function printHelp(): void {
   console.log(`
@@ -162,6 +177,7 @@ function parseArgs(argv: string[]): CliConfig {
     explicitRedirectUri: false,
     scope: DEFAULT_SCOPE,
     dotenvPath: DEFAULT_DOTENV_PATH,
+    explicitDotenvPath: false,
     writeEnv: false,
     refreshExisting: false,
     fixPermissions: false,
@@ -219,6 +235,7 @@ function parseArgs(argv: string[]): CliConfig {
 
       case "--dotenv":
         config.dotenvPath = nextValue(arg);
+        config.explicitDotenvPath = true;
         break;
 
       case "--refresh-existing":
@@ -307,13 +324,32 @@ async function readDotenv(dotenvPath: string): Promise<Record<string, string>> {
 function hydrateConfig(
   config: CliConfig,
   dotenvValues: Record<string, string>,
+  runtimeConfig: ResolvedPosthasteConfig,
 ): void {
+  const consumerKeyName = envNameFor(
+    runtimeConfig,
+    "tumblr",
+    "consumer_key",
+    "TUMBLR_CONSUMER_KEY",
+  );
+  const consumerSecretName = envNameFor(
+    runtimeConfig,
+    "tumblr",
+    "consumer_secret",
+    "TUMBLR_CONSUMER_SECRET",
+  );
+  const blogIdentifierName = envNameFor(
+    runtimeConfig,
+    "tumblr",
+    "blog_identifier",
+    "TUMBLR_BLOG_IDENTIFIER",
+  );
   const consumerKey =
-    process.env.TUMBLR_CONSUMER_KEY ?? dotenvValues.TUMBLR_CONSUMER_KEY;
+    process.env[consumerKeyName] ?? dotenvValues[consumerKeyName];
   const consumerSecret =
-    process.env.TUMBLR_CONSUMER_SECRET ?? dotenvValues.TUMBLR_CONSUMER_SECRET;
+    process.env[consumerSecretName] ?? dotenvValues[consumerSecretName];
   const blogIdentifier =
-    process.env.TUMBLR_BLOG_IDENTIFIER ?? dotenvValues.TUMBLR_BLOG_IDENTIFIER;
+    process.env[blogIdentifierName] ?? dotenvValues[blogIdentifierName];
 
   if (!config.consumerKey && consumerKey) {
     config.consumerKey = consumerKey;
@@ -342,16 +378,45 @@ function hydrateConfig(
   }
 
   if (!config.consumerKey) {
-    throw new Error("Missing --consumer-key or TUMBLR_CONSUMER_KEY.");
+    throw new Error(`Missing --consumer-key or ${consumerKeyName}.`);
   }
 
   if (!config.consumerSecret) {
-    throw new Error("Missing --consumer-secret or TUMBLR_CONSUMER_SECRET.");
+    throw new Error(`Missing --consumer-secret or ${consumerSecretName}.`);
   }
 
   if (!Number.isFinite(config.timeoutMs) || config.timeoutMs <= 0) {
     throw new Error("--timeout-ms must be a positive number.");
   }
+}
+
+async function loadRuntimeConfig(
+  config: CliConfig,
+): Promise<ResolvedPosthasteConfig> {
+  const runtimeConfig = await loadPosthasteConfig({
+    defaults: {
+      paths: {
+        dotenv: DEFAULT_DOTENV_PATH,
+      },
+      networks: {
+        tumblr: {
+          enabled: true,
+          env: TUMBLR_ENV_DEFAULTS,
+        },
+      },
+    },
+    cli: config.explicitDotenvPath
+      ? {
+          paths: {
+            dotenv: config.dotenvPath,
+          },
+        }
+      : undefined,
+    knownNetworks: POSTHASTE_SHARED_NETWORKS,
+  });
+
+  config.dotenvPath = runtimeConfig.paths.dotenv;
+  return runtimeConfig;
 }
 
 function normaliseCallbackPath(input: string): string {
@@ -779,12 +844,13 @@ function shellQuote(value: string): string {
 
 function updateDotenvContent(
   content: string,
-  values: Partial<Record<(typeof ENV_KEYS)[number], string>>,
+  values: Partial<Record<string, string>>,
+  envKeys: readonly string[],
 ): string {
   const lines = content.length > 0 ? content.split("\n") : [];
   const seen = new Set<string>();
   const updated = lines.map((line) => {
-    for (const key of ENV_KEYS) {
+    for (const key of envKeys) {
       if (values[key] === undefined) {
         continue;
       }
@@ -800,7 +866,7 @@ function updateDotenvContent(
     return line;
   });
 
-  for (const key of ENV_KEYS) {
+  for (const key of envKeys) {
     const value = values[key];
 
     if (value !== undefined && !seen.has(key)) {
@@ -813,8 +879,9 @@ function updateDotenvContent(
 
 async function writeDotenvValues(
   dotenvPath: string,
-  values: Partial<Record<(typeof ENV_KEYS)[number], string>>,
+  values: Partial<Record<string, string>>,
   fixPermissions: boolean,
+  envKeys: readonly string[] = ENV_KEYS,
 ): Promise<void> {
   const resolved = resolve(expandHomePath(dotenvPath));
   await assertPrivateDotenv(resolved, fixPermissions);
@@ -837,7 +904,7 @@ async function writeDotenvValues(
     }
   }
 
-  const next = updateDotenvContent(existing, values);
+  const next = updateDotenvContent(existing, values, envKeys);
   const tempPath = `${resolved}.${process.pid}.tmp`;
   await writeFile(tempPath, next, { encoding: "utf8", mode: 0o600 });
   await chmod(tempPath, 0o600);
@@ -938,8 +1005,45 @@ async function createNewToken(config: CliConfig): Promise<{
 
 async function main(): Promise<void> {
   const config = parseArgs(process.argv.slice(2));
+  const runtimeConfig = await loadRuntimeConfig(config);
   const dotenvValues = await readDotenv(config.dotenvPath);
-  hydrateConfig(config, dotenvValues);
+  hydrateConfig(config, dotenvValues, runtimeConfig);
+  const accessTokenKey = envNameFor(
+    runtimeConfig,
+    "tumblr",
+    "access_token",
+    "TUMBLR_ACCESS_TOKEN",
+  );
+  const blogIdentifierKey = envNameFor(
+    runtimeConfig,
+    "tumblr",
+    "blog_identifier",
+    "TUMBLR_BLOG_IDENTIFIER",
+  );
+  const consumerKeyKey = envNameFor(
+    runtimeConfig,
+    "tumblr",
+    "consumer_key",
+    "TUMBLR_CONSUMER_KEY",
+  );
+  const consumerSecretKey = envNameFor(
+    runtimeConfig,
+    "tumblr",
+    "consumer_secret",
+    "TUMBLR_CONSUMER_SECRET",
+  );
+  const refreshTokenKey = envNameFor(
+    runtimeConfig,
+    "tumblr",
+    "refresh_token",
+    "TUMBLR_REFRESH_TOKEN",
+  );
+  const expiresAtKey = envNameFor(
+    runtimeConfig,
+    "tumblr",
+    "access_token_expires_at",
+    "TUMBLR_ACCESS_TOKEN_EXPIRES_AT",
+  );
 
   let token: {
     accessToken: string;
@@ -950,11 +1054,11 @@ async function main(): Promise<void> {
 
   if (config.refreshExisting) {
     const refreshToken =
-      process.env.TUMBLR_REFRESH_TOKEN ?? dotenvValues.TUMBLR_REFRESH_TOKEN;
+      process.env[refreshTokenKey] ?? dotenvValues[refreshTokenKey];
 
     if (!refreshToken) {
       throw new Error(
-        "Missing TUMBLR_REFRESH_TOKEN. Run the browser OAuth flow without --refresh-existing first.",
+        `Missing ${refreshTokenKey}. Run the browser OAuth flow without --refresh-existing first.`,
       );
     }
 
@@ -967,41 +1071,42 @@ async function main(): Promise<void> {
     token.accessToken,
     config.blogIdentifier,
   );
-  const dotenvUpdates: Partial<Record<(typeof ENV_KEYS)[number], string>> = {
-    TUMBLR_ACCESS_TOKEN: token.accessToken,
-    TUMBLR_BLOG_IDENTIFIER: blogIdentifier,
+  const dotenvUpdates: Partial<Record<string, string>> = {
+    [accessTokenKey]: token.accessToken,
+    [blogIdentifierKey]: blogIdentifier,
   };
 
   if (config.consumerKey) {
-    dotenvUpdates.TUMBLR_CONSUMER_KEY = config.consumerKey;
+    dotenvUpdates[consumerKeyKey] = config.consumerKey;
   }
 
   if (config.consumerSecret) {
-    dotenvUpdates.TUMBLR_CONSUMER_SECRET = config.consumerSecret;
+    dotenvUpdates[consumerSecretKey] = config.consumerSecret;
   }
 
   if (token.refreshToken) {
-    dotenvUpdates.TUMBLR_REFRESH_TOKEN = token.refreshToken;
+    dotenvUpdates[refreshTokenKey] = token.refreshToken;
   }
 
   if (token.expiresAt) {
-    dotenvUpdates.TUMBLR_ACCESS_TOKEN_EXPIRES_AT = token.expiresAt;
+    dotenvUpdates[expiresAtKey] = token.expiresAt;
   }
+
+  const savedKeys = [
+    config.consumerKey ? consumerKeyKey : undefined,
+    config.consumerSecret ? consumerSecretKey : undefined,
+    accessTokenKey,
+    token.refreshToken ? refreshTokenKey : undefined,
+    token.expiresAt ? expiresAtKey : undefined,
+    blogIdentifierKey,
+  ].filter((key): key is string => typeof key === "string");
 
   await writeDotenvValues(
     config.dotenvPath,
     dotenvUpdates,
     config.fixPermissions,
+    savedKeys,
   );
-
-  const savedKeys = [
-    config.consumerKey ? "TUMBLR_CONSUMER_KEY" : undefined,
-    config.consumerSecret ? "TUMBLR_CONSUMER_SECRET" : undefined,
-    "TUMBLR_ACCESS_TOKEN",
-    token.refreshToken ? "TUMBLR_REFRESH_TOKEN" : undefined,
-    token.expiresAt ? "TUMBLR_ACCESS_TOKEN_EXPIRES_AT" : undefined,
-    "TUMBLR_BLOG_IDENTIFIER",
-  ].filter(Boolean);
 
   console.log(
     `Stored Tumblr OAuth values in ${resolve(expandHomePath(config.dotenvPath))}.`,

@@ -21,6 +21,12 @@ import { createServer as createHttpsServer } from "node:https";
 import { homedir, platform, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
+import {
+  envNameFor,
+  loadPosthasteConfig,
+  POSTHASTE_SHARED_NETWORKS,
+  type ResolvedPosthasteConfig,
+} from "../../posthaste-config/resources/config.ts";
 
 interface CliConfig {
   appId?: string;
@@ -34,6 +40,7 @@ interface CliConfig {
   httpsCert?: string;
   scope: string;
   dotenvPath: string;
+  explicitDotenvPath: boolean;
   writeEnv: boolean;
   refreshExisting: boolean;
   fixPermissions: boolean;
@@ -84,6 +91,15 @@ const ENV_KEYS = [
   "THREADS_ACCESS_TOKEN_EXPIRES_AT",
   "THREADS_USERNAME",
 ] as const;
+const THREADS_ENV_DEFAULTS = {
+  access_token: "THREADS_ACCESS_TOKEN",
+  access_token_expires_at: "THREADS_ACCESS_TOKEN_EXPIRES_AT",
+  app_id: "THREADS_APP_ID",
+  app_secret: "THREADS_APP_SECRET",
+  client_token: "THREADS_CLIENT_TOKEN",
+  user_id: "THREADS_USER_ID",
+  username: "THREADS_USERNAME",
+};
 
 function printHelp(): void {
   console.log(`
@@ -167,6 +183,7 @@ function parseArgs(argv: string[]): CliConfig {
     explicitRedirectUri: false,
     scope: DEFAULT_SCOPE,
     dotenvPath: DEFAULT_DOTENV_PATH,
+    explicitDotenvPath: false,
     writeEnv: false,
     refreshExisting: false,
     fixPermissions: false,
@@ -228,6 +245,7 @@ function parseArgs(argv: string[]): CliConfig {
 
       case "--dotenv":
         config.dotenvPath = nextValue(arg);
+        config.explicitDotenvPath = true;
         break;
 
       case "--refresh-existing":
@@ -316,10 +334,22 @@ async function readDotenv(dotenvPath: string): Promise<Record<string, string>> {
 function hydrateConfig(
   config: CliConfig,
   dotenvValues: Record<string, string>,
+  runtimeConfig: ResolvedPosthasteConfig,
 ): void {
-  const appId = process.env.THREADS_APP_ID ?? dotenvValues.THREADS_APP_ID;
-  const appSecret =
-    process.env.THREADS_APP_SECRET ?? dotenvValues.THREADS_APP_SECRET;
+  const appIdName = envNameFor(
+    runtimeConfig,
+    "threads",
+    "app_id",
+    "THREADS_APP_ID",
+  );
+  const appSecretName = envNameFor(
+    runtimeConfig,
+    "threads",
+    "app_secret",
+    "THREADS_APP_SECRET",
+  );
+  const appId = process.env[appIdName] ?? dotenvValues[appIdName];
+  const appSecret = process.env[appSecretName] ?? dotenvValues[appSecretName];
 
   if (!config.appId && appId) {
     config.appId = appId;
@@ -344,16 +374,45 @@ function hydrateConfig(
   }
 
   if (!config.appId && !config.refreshExisting) {
-    throw new Error("Missing --app-id or THREADS_APP_ID.");
+    throw new Error(`Missing --app-id or ${appIdName}.`);
   }
 
   if (!config.appSecret && !config.refreshExisting) {
-    throw new Error("Missing --app-secret or THREADS_APP_SECRET.");
+    throw new Error(`Missing --app-secret or ${appSecretName}.`);
   }
 
   if (!Number.isFinite(config.timeoutMs) || config.timeoutMs <= 0) {
     throw new Error("--timeout-ms must be a positive number.");
   }
+}
+
+async function loadRuntimeConfig(
+  config: CliConfig,
+): Promise<ResolvedPosthasteConfig> {
+  const runtimeConfig = await loadPosthasteConfig({
+    defaults: {
+      paths: {
+        dotenv: DEFAULT_DOTENV_PATH,
+      },
+      networks: {
+        threads: {
+          enabled: true,
+          env: THREADS_ENV_DEFAULTS,
+        },
+      },
+    },
+    cli: config.explicitDotenvPath
+      ? {
+          paths: {
+            dotenv: config.dotenvPath,
+          },
+        }
+      : undefined,
+    knownNetworks: POSTHASTE_SHARED_NETWORKS,
+  });
+
+  config.dotenvPath = runtimeConfig.paths.dotenv;
+  return runtimeConfig;
 }
 
 function normaliseCallbackPath(input: string): string {
@@ -902,12 +961,13 @@ function shellQuote(value: string): string {
 
 function updateDotenvContent(
   content: string,
-  values: Partial<Record<(typeof ENV_KEYS)[number], string>>,
+  values: Partial<Record<string, string>>,
+  envKeys: readonly string[],
 ): string {
   const lines = content.length > 0 ? content.split("\n") : [];
   const seen = new Set<string>();
   const updated = lines.map((line) => {
-    for (const key of ENV_KEYS) {
+    for (const key of envKeys) {
       if (values[key] === undefined) {
         continue;
       }
@@ -923,7 +983,7 @@ function updateDotenvContent(
     return line;
   });
 
-  for (const key of ENV_KEYS) {
+  for (const key of envKeys) {
     const value = values[key];
 
     if (value !== undefined && !seen.has(key)) {
@@ -936,8 +996,9 @@ function updateDotenvContent(
 
 async function writeDotenvValues(
   dotenvPath: string,
-  values: Partial<Record<(typeof ENV_KEYS)[number], string>>,
+  values: Partial<Record<string, string>>,
   fixPermissions: boolean,
+  envKeys: readonly string[] = ENV_KEYS,
 ): Promise<void> {
   const resolved = resolve(expandHomePath(dotenvPath));
   await assertPrivateDotenv(resolved, fixPermissions);
@@ -960,7 +1021,7 @@ async function writeDotenvValues(
     }
   }
 
-  const next = updateDotenvContent(existing, values);
+  const next = updateDotenvContent(existing, values, envKeys);
   const tempPath = `${resolved}.${process.pid}.tmp`;
   await writeFile(tempPath, next, { encoding: "utf8", mode: 0o600 });
   await chmod(tempPath, 0o600);
@@ -1080,20 +1141,56 @@ async function createNewToken(
 
 async function main(): Promise<void> {
   const config = parseArgs(process.argv.slice(2));
+  const runtimeConfig = await loadRuntimeConfig(config);
   const dotenvValues = await readDotenv(config.dotenvPath);
-  hydrateConfig(config, dotenvValues);
+  hydrateConfig(config, dotenvValues, runtimeConfig);
 
-  const existingUserId =
-    process.env.THREADS_USER_ID ?? dotenvValues.THREADS_USER_ID;
+  const accessTokenKey = envNameFor(
+    runtimeConfig,
+    "threads",
+    "access_token",
+    "THREADS_ACCESS_TOKEN",
+  );
+  const expiresAtKey = envNameFor(
+    runtimeConfig,
+    "threads",
+    "access_token_expires_at",
+    "THREADS_ACCESS_TOKEN_EXPIRES_AT",
+  );
+  const appIdKey = envNameFor(
+    runtimeConfig,
+    "threads",
+    "app_id",
+    "THREADS_APP_ID",
+  );
+  const appSecretKey = envNameFor(
+    runtimeConfig,
+    "threads",
+    "app_secret",
+    "THREADS_APP_SECRET",
+  );
+  const userIdKey = envNameFor(
+    runtimeConfig,
+    "threads",
+    "user_id",
+    "THREADS_USER_ID",
+  );
+  const usernameKey = envNameFor(
+    runtimeConfig,
+    "threads",
+    "username",
+    "THREADS_USERNAME",
+  );
+  const existingUserId = process.env[userIdKey] ?? dotenvValues[userIdKey];
   let token: { accessToken: string; userId?: string; expiresAt?: string };
 
   if (config.refreshExisting) {
     const existingToken =
-      process.env.THREADS_ACCESS_TOKEN ?? dotenvValues.THREADS_ACCESS_TOKEN;
+      process.env[accessTokenKey] ?? dotenvValues[accessTokenKey];
 
     if (!existingToken) {
       throw new Error(
-        "Missing THREADS_ACCESS_TOKEN. Run the browser OAuth flow without --refresh-existing first.",
+        `Missing ${accessTokenKey}. Run the browser OAuth flow without --refresh-existing first.`,
       );
     }
 
@@ -1115,41 +1212,42 @@ async function main(): Promise<void> {
     );
   }
 
-  const dotenvUpdates: Partial<Record<(typeof ENV_KEYS)[number], string>> = {
-    THREADS_ACCESS_TOKEN: token.accessToken,
-    THREADS_USER_ID: userId,
+  const dotenvUpdates: Partial<Record<string, string>> = {
+    [accessTokenKey]: token.accessToken,
+    [userIdKey]: userId,
   };
 
   if (config.appId) {
-    dotenvUpdates.THREADS_APP_ID = config.appId;
+    dotenvUpdates[appIdKey] = config.appId;
   }
 
   if (config.appSecret) {
-    dotenvUpdates.THREADS_APP_SECRET = config.appSecret;
+    dotenvUpdates[appSecretKey] = config.appSecret;
   }
 
   if (token.expiresAt) {
-    dotenvUpdates.THREADS_ACCESS_TOKEN_EXPIRES_AT = token.expiresAt;
+    dotenvUpdates[expiresAtKey] = token.expiresAt;
   }
 
   if (user.username) {
-    dotenvUpdates.THREADS_USERNAME = user.username;
+    dotenvUpdates[usernameKey] = user.username;
   }
+
+  const savedKeys = [
+    config.appId ? appIdKey : undefined,
+    config.appSecret ? appSecretKey : undefined,
+    accessTokenKey,
+    userIdKey,
+    token.expiresAt ? expiresAtKey : undefined,
+    user.username ? usernameKey : undefined,
+  ].filter((key): key is string => typeof key === "string");
 
   await writeDotenvValues(
     config.dotenvPath,
     dotenvUpdates,
     config.fixPermissions,
+    savedKeys,
   );
-
-  const savedKeys = [
-    config.appId ? "THREADS_APP_ID" : undefined,
-    config.appSecret ? "THREADS_APP_SECRET" : undefined,
-    "THREADS_ACCESS_TOKEN",
-    "THREADS_USER_ID",
-    token.expiresAt ? "THREADS_ACCESS_TOKEN_EXPIRES_AT" : undefined,
-    user.username ? "THREADS_USERNAME" : undefined,
-  ].filter(Boolean);
 
   console.log(
     `Stored Threads OAuth values in ${resolve(expandHomePath(config.dotenvPath))}.`,

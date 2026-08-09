@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 
+import type { ResolvedPosthasteConfig } from "../../posthaste-config/resources/config.ts";
 import {
   asRecord,
   type CommonDirectConfig,
   fetchJson,
   firstString,
-  getEnvValue,
+  getConfiguredEnvValue,
+  loadDirectRuntimeConfig,
   printJson,
-  readDotenv,
   readMessage,
   redactSecrets,
-  requireEnvValue,
+  requireConfiguredEnvValue,
 } from "./direct-api-utils.ts";
 
 type RedditPostType = "link" | "self";
@@ -25,6 +26,18 @@ interface RedditConfig extends CommonDirectConfig {
 }
 
 const DEFAULT_DOTENV_PATH = "~/.env";
+const REDDIT_DEFAULTS = {
+  enabled: true,
+  env: {
+    access_token: "REDDIT_ACCESS_TOKEN",
+    client_id: "REDDIT_CLIENT_ID",
+    client_secret: "REDDIT_CLIENT_SECRET",
+    flair_id: "REDDIT_FLAIR_ID",
+    refresh_token: "REDDIT_REFRESH_TOKEN",
+    subreddit: "REDDIT_SUBREDDIT",
+    user_agent: "REDDIT_USER_AGENT",
+  },
+};
 
 function printHelp(): void {
   console.log(`
@@ -71,6 +84,7 @@ function parseRedditPostType(value: string): RedditPostType {
 function parseArgs(argv: string[]): RedditConfig {
   const config: RedditConfig = {
     dotenvPath: DEFAULT_DOTENV_PATH,
+    explicitDotenvPath: false,
     dryRun: false,
     redditNoComment: false,
   };
@@ -124,6 +138,7 @@ function parseArgs(argv: string[]): RedditConfig {
 
       case "--dotenv":
         config.dotenvPath = nextValue(arg);
+        config.explicitDotenvPath = true;
         break;
 
       case "--dry-run":
@@ -195,18 +210,49 @@ function redditPostFullName(data: Record<string, unknown>): string | undefined {
 }
 
 async function getAccessToken(
+  config: ResolvedPosthasteConfig,
   dotenvValues: Record<string, string>,
 ): Promise<string> {
-  const accessToken = getEnvValue("REDDIT_ACCESS_TOKEN", dotenvValues);
+  const accessToken = getConfiguredEnvValue(
+    config,
+    "reddit",
+    "access_token",
+    "REDDIT_ACCESS_TOKEN",
+    dotenvValues,
+  );
 
   if (accessToken) {
     return accessToken;
   }
 
-  const clientId = requireEnvValue("REDDIT_CLIENT_ID", dotenvValues);
-  const clientSecret = requireEnvValue("REDDIT_CLIENT_SECRET", dotenvValues);
-  const refreshToken = requireEnvValue("REDDIT_REFRESH_TOKEN", dotenvValues);
-  const userAgent = requireEnvValue("REDDIT_USER_AGENT", dotenvValues);
+  const clientId = requireConfiguredEnvValue(
+    config,
+    "reddit",
+    "client_id",
+    "REDDIT_CLIENT_ID",
+    dotenvValues,
+  );
+  const clientSecret = requireConfiguredEnvValue(
+    config,
+    "reddit",
+    "client_secret",
+    "REDDIT_CLIENT_SECRET",
+    dotenvValues,
+  );
+  const refreshToken = requireConfiguredEnvValue(
+    config,
+    "reddit",
+    "refresh_token",
+    "REDDIT_REFRESH_TOKEN",
+    dotenvValues,
+  );
+  const userAgent = requireConfiguredEnvValue(
+    config,
+    "reddit",
+    "user_agent",
+    "REDDIT_USER_AGENT",
+    dotenvValues,
+  );
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     refresh_token: refreshToken,
@@ -294,31 +340,47 @@ async function commentOnPost(
 }
 
 async function postReddit(): Promise<void> {
-  const config = parseArgs(process.argv.slice(2));
-  const message = await readMessage(config);
-  const dotenvValues = await readDotenv(config.dotenvPath);
-  const redditPostType = determinePostType(config);
-  const title = deriveTitle(message, config.title);
+  const cliConfig = parseArgs(process.argv.slice(2));
+  const message = await readMessage(cliConfig);
+  const runtime = await loadDirectRuntimeConfig(
+    cliConfig,
+    "reddit",
+    REDDIT_DEFAULTS,
+  );
+  const redditPostType = determinePostType(cliConfig);
+  const title = deriveTitle(message, cliConfig.title);
 
-  if (config.dryRun) {
+  if (cliConfig.dryRun) {
     printJson({
       network: "reddit",
       dryRun: true,
       postType: redditPostType,
       title,
-      linkUrl: redditPostType === "link" ? redditLinkUrl(config) : undefined,
+      linkUrl: redditPostType === "link" ? redditLinkUrl(cliConfig) : undefined,
       willComment:
         redditPostType === "link" &&
-        !config.redditNoComment &&
+        !cliConfig.redditNoComment &&
         Boolean(message),
       characters: [...message].length,
     });
     return;
   }
 
-  const token = await getAccessToken(dotenvValues);
-  const subreddit = requireEnvValue("REDDIT_SUBREDDIT", dotenvValues);
-  const userAgent = requireEnvValue("REDDIT_USER_AGENT", dotenvValues);
+  const token = await getAccessToken(runtime.config, runtime.dotenvValues);
+  const subreddit = requireConfiguredEnvValue(
+    runtime.config,
+    "reddit",
+    "subreddit",
+    "REDDIT_SUBREDDIT",
+    runtime.dotenvValues,
+  );
+  const userAgent = requireConfiguredEnvValue(
+    runtime.config,
+    "reddit",
+    "user_agent",
+    "REDDIT_USER_AGENT",
+    runtime.dotenvValues,
+  );
   const body = new URLSearchParams({
     api_type: "json",
     kind: redditPostType,
@@ -327,10 +389,16 @@ async function postReddit(): Promise<void> {
     sr: subreddit,
     title,
   });
-  const flairId = getEnvValue("REDDIT_FLAIR_ID", dotenvValues);
+  const flairId = getConfiguredEnvValue(
+    runtime.config,
+    "reddit",
+    "flair_id",
+    "REDDIT_FLAIR_ID",
+    runtime.dotenvValues,
+  );
 
   if (redditPostType === "link") {
-    body.set("url", redditLinkUrl(config));
+    body.set("url", redditLinkUrl(cliConfig));
   } else {
     body.set("text", message);
   }
@@ -352,18 +420,22 @@ async function postReddit(): Promise<void> {
         body,
       },
       "Reddit submit",
-      dotenvValues,
+      runtime.dotenvValues,
     ),
   );
 
-  assertNoRedditErrors("Reddit submit", json, dotenvValues);
+  assertNoRedditErrors("Reddit submit", json, runtime.dotenvValues);
 
   const data = asRecord(asRecord(json.json).data);
   const url = firstString(data.permalink, data.url);
   const postUrl = url?.startsWith("/") ? `https://www.reddit.com${url}` : url;
   let commentUrl: string | undefined;
 
-  if (redditPostType === "link" && !config.redditNoComment && message.trim()) {
+  if (
+    redditPostType === "link" &&
+    !cliConfig.redditNoComment &&
+    message.trim()
+  ) {
     const thingId = redditPostFullName(data);
 
     if (!thingId) {
@@ -377,7 +449,7 @@ async function postReddit(): Promise<void> {
       userAgent,
       thingId,
       message,
-      dotenvValues,
+      runtime.dotenvValues,
     );
   }
 
