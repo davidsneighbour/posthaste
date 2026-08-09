@@ -22,11 +22,9 @@ Install the current Posthaste! skill set with:
 npx skills add davidsneighbour/posthaste --yes
 ```
 
-Install one skill by id:
-
-```bash
-npx skills add davidsneighbour/posthaste --skill posthaste-prepare-link --yes
-```
+Install the full skill set together. The skills are intentionally
+interconnected: posting, configuration, voice checks, hashtag retrieval, and
+network token helpers depend on each other for the complete workflow.
 
 ## Update
 
@@ -47,7 +45,20 @@ Posthaste! can use layered TOML configuration for persistent, non-secret default
 .posthaste.toml                   project configuration
 ```
 
-Configuration is applied over defaults owned by each skill. Project settings override global settings, environment-specific overrides such as `CROSSPOST_DOTENV` override those files where applicable, and explicit command or user-request values override configuration.
+Configuration is applied over defaults owned by each skill. Project settings override global settings, explicitly supplied config files override project settings, environment-specific overrides such as `CROSSPOST_DOTENV` override those files where applicable, and explicit command, argument, or user-request values from the chat override configuration.
+
+```mermaid
+flowchart BT
+  defaults["Skill-owned defaults"]
+  global["Global config<br/>~/.config/posthaste/config.toml"]
+  project["Project config<br/>.posthaste.toml"]
+  explicitFile["Explicit config file<br/>when provided"]
+  environment["Environment layer<br/>process variables, dotenv values,<br/>CROSSPOST_DOTENV"]
+  request["Explicit runtime request<br/>CLI flags, command arguments,<br/>chat instructions"]
+  effective["Effective Posthaste! settings"]
+
+  defaults --> global --> project --> explicitFile --> environment --> request --> effective
+```
 
 Example:
 
