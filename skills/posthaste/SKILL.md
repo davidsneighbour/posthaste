@@ -7,6 +7,13 @@ description: Route the Posthaste social publishing skillset. Use when the user w
 
 Use this router skill to choose the right Posthaste workflow.
 
+Before handing an operational request to another Posthaste skill, use
+`posthaste-config` discovery and merge rules to resolve available global and
+project configuration. Pass only relevant resolved values to the consuming
+skill. Explicit values in the current user request always take precedence over
+configuration. Do not turn this implicit lookup into a questionnaire merely
+because no config file exists; consuming-skill defaults remain valid.
+
 * Use `posthaste-config` when the user wants to inspect, validate, initialise,
   or edit Posthaste configuration, or when another Posthaste skill needs
   persistent user or project defaults resolved.
