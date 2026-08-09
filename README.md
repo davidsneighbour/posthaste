@@ -7,6 +7,13 @@
 
 Posthaste! is a collection of reusable AI skills for drafting, adapting, reviewing, and publishing social media content. Let's keep social publishing workflows focused, portable, and easy to use across projects and AI assistants.
 
+* [AI-assisted social publishing, posthaste](#ai-assisted-social-publishing-posthaste)
+* [Install](#install)
+* [Update](#update)
+* [Configuration](#configuration)
+* [Networks](#networks)
+* [Skills](#skills)
+
 ## Install
 
 Install the current Posthaste! skill set with:
@@ -71,6 +78,48 @@ refresh_token = "REDDIT_REFRESH_TOKEN"
 Use `posthaste-config` to inspect, validate, initialise, or edit these files. The setup workflow can ask for values such as default posting networks, custom paths, and environment-variable name overrides.
 
 Do not store passwords, access tokens, refresh tokens, client secrets, private keys, or other credentials in the TOML files. Configuration may contain the names of environment variables that hold those values; credentials themselves remain in environment-backed secret storage such as the configured `~/.env` file.
+
+## Networks
+
+Posthaste! separates networks by how much setup and automation they can safely support. Configure the easy Crosspost-backed networks first, keep X/Twitter manual, then add the direct API networks that need a token helper flow.
+
+### Crosspost networks
+
+`posthaste-prepare-link` can publish confirmed posts through `@humanwhocodes/crosspost` for these networks:
+
+* Mastodon: set `MASTODON_ACCESS_TOKEN` and `MASTODON_HOST`.
+* Bluesky: set `BLUESKY_HOST`, `BLUESKY_IDENTIFIER`, and `BLUESKY_PASSWORD`.
+* LinkedIn: set `LINKEDIN_ACCESS_TOKEN`.
+* Nostr: set `NOSTR_PRIVATE_KEY` and `NOSTR_RELAYS`.
+
+These are the easiest networks to enable because they use the shared Crosspost transport. Store their values in the configured dotenv file, usually `~/.env`, and use `posting.default_networks` to decide which of them run by default.
+
+### X/Twitter manual posting
+
+X/Twitter is intentionally not part of automated posting. When the user asks to post to Twitter or X, use the prepared text and screenshot from `posthaste-prepare-link`, then run the manual intent helper:
+
+```bash
+node skills/posthaste-prepare-link/resources/post-twitter-intent.ts \
+  --message-file ./message.txt \
+  --url https://example.com/post \
+  --open
+```
+
+Review the opened X/Twitter compose window, attach the screenshot manually if needed, and click the final post button only after explicit confirmation. Log the result in the posted-log workflow so future runs know the link has already been handled for Twitter/X.
+
+### Token-authenticated networks
+
+Reddit, Threads, and Tumblr use direct API integrations instead of Crosspost. Each one has a companion refresh-token skill with a small callback server or hosted callback page so OAuth tokens can be generated without printing secrets in chat.
+
+* Reddit uses `posthaste-reddit-refresh-token` to create a refresh token through a local loopback server. Posting needs either `REDDIT_ACCESS_TOKEN`, `REDDIT_USER_AGENT`, and `REDDIT_SUBREDDIT`, or `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_REFRESH_TOKEN`, `REDDIT_USER_AGENT`, and `REDDIT_SUBREDDIT`.
+* Threads uses `posthaste-threads-refresh-token` to create or refresh a long-lived access token. Posting needs `THREADS_ACCESS_TOKEN` and `THREADS_USER_ID`; app setup also uses `THREADS_APP_ID` and `THREADS_APP_SECRET`.
+* Tumblr uses `posthaste-tumblr-refresh-token` to create or refresh OAuth2 credentials. Posting needs `TUMBLR_ACCESS_TOKEN` and `TUMBLR_BLOG_IDENTIFIER`; app setup also uses `TUMBLR_CONSUMER_KEY`, `TUMBLR_CONSUMER_SECRET`, and often `TUMBLR_REFRESH_TOKEN`.
+
+After setting up any of these networks, verify what Posthaste! can see:
+
+```bash
+node skills/posthaste-prepare-link/resources/post-crosspost.ts --info
+```
 
 ## Skills
 
