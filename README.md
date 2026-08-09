@@ -1,18 +1,21 @@
 <!-- markdownlint-disable-next-line MD026 -->
 # Posthaste!
 
-![You won't ever believe what I have to tell you!](.github/assets/posthaste.jpg)
+!(You won't ever believe what I have to tell you!)(.github/assets/posthaste.jpg)
 
 ## AI-assisted social publishing, posthaste
 
 Posthaste! is a collection of reusable AI skills for drafting, adapting, reviewing, and publishing social media content. Let's keep social publishing workflows focused, portable, and easy to use across projects and AI assistants.
 
-* [AI-assisted social publishing, posthaste](#ai-assisted-social-publishing-posthaste)
-* [Install](#install)
-* [Update](#update)
-* [Configuration](#configuration)
-* [Networks](#networks)
-* [Skills](#skills)
+* (AI-assisted social publishing, posthaste)(#ai-assisted-social-publishing-posthaste)
+* (Install)(#install)
+* (Update)(#update)
+* (Configuration)(#configuration)
+* (Networks)(#networks)
+  * (Crosspost networks)(#crosspost-networks)
+  * (X/Twitter manual posting)(#xtwitter-manual-posting)
+  * (Token-authenticated networks)(#token-authenticated-networks)
+* (Skills)(#skills)
 
 ## Install
 
@@ -48,14 +51,14 @@ Posthaste! can use layered TOML configuration for persistent, non-secret default
 Configuration is applied over defaults owned by each skill. Project settings override global settings, explicitly supplied config files override project settings, environment-specific overrides such as `CROSSPOST_DOTENV` override those files where applicable, and explicit command, argument, or user-request values from the chat override configuration.
 
 ```mermaid
-flowchart BT
-  defaults["Skill-owned defaults"]
-  global["Global config<br/>~/.config/posthaste/config.toml"]
-  project["Project config<br/>.posthaste.toml"]
-  explicitFile["Explicit config file<br/>when provided"]
-  environment["Environment layer<br/>process variables, dotenv values,<br/>CROSSPOST_DOTENV"]
-  request["Explicit runtime request<br/>CLI flags, command arguments,<br/>chat instructions"]
-  effective["Effective Posthaste! settings"]
+flowchart TD
+  defaults("Skill-owned defaults")
+  global("Global config<br/>~/.config/posthaste/config.toml")
+  project("Project config<br/>.posthaste.toml")
+  explicitFile("Explicit config file<br/>when provided")
+  environment("Environment layer<br/>process variables, dotenv values,<br/>CROSSPOST_DOTENV")
+  request("Explicit runtime request<br/>CLI flags, command arguments,<br/>chat instructions")
+  effective("Effective Posthaste! settings")
 
   defaults --> global --> project --> explicitFile --> environment --> request --> effective
 ```
@@ -65,21 +68,21 @@ Example:
 ```toml
 version = 1
 
-[posting]
-default_networks = [
+(posting)
+default_networks = (
   "mastodon",
   "bluesky",
   "linkedin",
-]
+)
 
-[paths]
+(paths)
 dotenv = "~/.env"
 posted_log = "~/.local/share/posthaste-prepare-link/posted.jsonl"
 
-[networks.reddit]
+(networks.reddit)
 enabled = true
 
-[networks.reddit.env]
+(networks.reddit.env)
 access_token = "REDDIT_ACCESS_TOKEN"
 client_id = "REDDIT_CLIENT_ID"
 client_secret = "REDDIT_CLIENT_SECRET"
