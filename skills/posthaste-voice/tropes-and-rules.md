@@ -579,26 +579,15 @@ Watch for:
 
 ## Formatting tells
 
-The baseline punctuation, heading-case, unicode, and bullet-formatting rules
-are always-on and live in `voice.instructions.md` in this skill directory. Apply
-them during every edit. Watch in particular for em dash overuse, bold-first
-bullets, inline-header vertical lists, title-case headings, decorative unicode,
-and curly quotes, since generated prose drifts toward all of them by default.
+The baseline punctuation, heading-case, unicode, filler, and bullet-formatting
+rules are always-on and live in `voice.instructions.md` in this skill directory.
+Apply them during every edit.
 
 ## Filler and hedging
 
-Replace filler with direct wording:
-
-* in order to -> to
-* due to the fact that -> because
-* at this point in time -> now
-* in the event that -> if
-* has the ability to -> can
-* it is important to note that -> remove it
-* could potentially possibly -> may
-
-Keep necessary uncertainty. Remove hedging that only protects the sentence from
-having a point.
+Use the replacement table in `voice.instructions.md` for mechanical filler. In
+this checklist, treat filler as a voice clue: if a paragraph needs several
+filler edits, it probably also lacks a concrete actor, example, or point.
 
 ## Review output checklist
 
