@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Tumblr OAuth callback</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #6b6b6b;
+    --border: #d9d9d9;
+    --accent: #101010;
+    --accent-fg: #ffffff;
+    --ok-bg: #eef7ee;
+    --ok-border: #bfe3bf;
+    --err-bg: #fdecea;
+    --err-border: #f3b7b0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121212;
+      --fg: #f0f0f0;
+      --muted: #a0a0a0;
+      --border: #333333;
+      --accent: #f0f0f0;
+      --accent-fg: #121212;
+      --ok-bg: #10321a;
+      --ok-border: #1f5c33;
+      --err-bg: #3a1616;
+      --err-border: #6e2a24;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main {
+    width: 100%;
+    max-width: 40rem;
+  }
+  h1 {
+    font-size: 1.25rem;
+    margin: 0 0 0.5rem;
+  }
+  p.lede {
+    color: var(--muted);
+    margin: 0 0 1.5rem;
+  }
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .panel.ok { background: var(--ok-bg); border-color: var(--ok-border); }
+  .panel.err { background: var(--err-bg); border-color: var(--err-border); }
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+  .row { margin-bottom: 1rem; }
+  .row:last-child { margin-bottom: 0; }
+  input[type="text"] {
+    width: 100%;
+    font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--fg);
+  }
+  button {
+    margin-top: 0.5rem;
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border);
+    background: var(--accent);
+    color: var(--accent-fg);
+    cursor: pointer;
+  }
+  button:active { opacity: 0.85; }
+  .steps {
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding-left: 1.1rem;
+  }
+  .steps li { margin-bottom: 0.4rem; }
+  footer {
+    margin-top: 1.5rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tumblr OAuth callback</h1>
+  <p class="lede">
+    Hosted redirect target for <code>posthaste-tumblr-refresh-token</code>. This
+    page runs entirely in your browser: it reads the URL Tumblr redirected
+    you to and never sends it anywhere else.
+  </p>
+
+  <div id="result"></div>
+
+  <footer>
+    Nothing on this page is logged, stored, or transmitted. Closing this tab
+    does not affect the pending authorization.
+  </footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get("code");
+  var state = params.get("state");
+  var error = params.get("error");
+  var errorDescription = params.get("error_description") || params.get("error_message");
+  var resultEl = document.getElementById("result");
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    for (var key in attrs || {}) {
+      node.setAttribute(key, attrs[key]);
+    }
+    (children || []).forEach(function (child) {
+      node.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+    });
+    return node;
+  }
+
+  function copyField(labelText, value) {
+    var row = el("div", { class: "row" });
+    row.appendChild(el("label", {}, [labelText]));
+    var input = el("input", { type: "text", readonly: "readonly", value: value });
+    row.appendChild(input);
+    var button = el("button", { type: "button" }, ["Copy"]);
+    button.addEventListener("click", function () {
+      input.select();
+      input.setSelectionRange(0, value.length);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(function () {
+          button.textContent = "Copied";
+          setTimeout(function () { button.textContent = "Copy"; }, 1500);
+        });
+      } else {
+        document.execCommand("copy");
+      }
+    });
+    row.appendChild(button);
+    return row;
+  }
+
+  if (error) {
+    var errPanel = el("div", { class: "panel err" });
+    errPanel.appendChild(el("h2", {}, ["Tumblr returned an error"]));
+    errPanel.appendChild(copyField("error", error));
+    if (errorDescription) {
+      errPanel.appendChild(copyField("error_description", errorDescription));
+    }
+    resultEl.appendChild(errPanel);
+    return;
+  }
+
+  if (code) {
+    var okPanel = el("div", { class: "panel ok" });
+    okPanel.appendChild(el("h2", {}, ["Authorization received"]));
+    okPanel.appendChild(copyField("Full callback URL", window.location.href));
+    okPanel.appendChild(copyField("code", code));
+    if (state) {
+      okPanel.appendChild(copyField("state", state));
+    }
+    resultEl.appendChild(okPanel);
+
+    var steps = el("ol", { class: "steps" }, [
+      el("li", {}, ["Go back to the terminal running create-tumblr-refresh-token.ts."]),
+      el("li", {}, ["Paste the full callback URL above when it asks for it."]),
+      el("li", {}, ["You can close this tab afterwards; nothing here needs to stay open."]),
+    ]);
+    resultEl.appendChild(steps);
+    return;
+  }
+
+  var infoPanel = el("div", { class: "panel" });
+  infoPanel.appendChild(el("h2", {}, ["Waiting for a Tumblr redirect"]));
+  infoPanel.appendChild(
+    el("p", {}, [
+      "This page has no code or error in its URL yet. Start the token helper " +
+        "locally and complete the Tumblr authorization prompt; Tumblr will " +
+        "redirect back here with the result.",
+    ]),
+  );
+  resultEl.appendChild(infoPanel);
+})();
+</script>
+</body>
+</html>

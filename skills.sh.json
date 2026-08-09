@@ -1,0 +1,24 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Posthaste",
+      "description": "Core skills for drafting, adapting, and publishing social posts.",
+      "skills": [
+        "posthaste",
+        "posthaste-prepare-link",
+        "posthaste-post-retrieve-hashtags"
+      ]
+    },
+    {
+      "title": "Credential Helpers",
+      "description": "OAuth setup skills for direct social network publishing.",
+      "skills": [
+        "posthaste-reddit-refresh-token",
+        "posthaste-threads-refresh-token",
+        "posthaste-tumblr-refresh-token"
+      ]
+    }
+  ]
+}
