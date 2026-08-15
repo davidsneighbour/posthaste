@@ -27,7 +27,8 @@ README assets live in `.github/assets/`.
   credentials from `UNSPLASH_POSTHASTE_ACCESS_KEY`, falling back to
   `UNSPLASH_ACCESS_KEY`.
 - `posthaste-voice`: prose editing skill. For substantial edits, use
-  `skills/posthaste-voice/tropes-and-rules.md` as the diagnostic checklist.
+  `skills/posthaste-voice/resources/tropes-and-rules.md` as the diagnostic
+  checklist.
 - `posthaste-reddit-refresh-token`, `posthaste-threads-refresh-token`, and
   `posthaste-tumblr-refresh-token`: OAuth setup helpers that must never expose
   token values.

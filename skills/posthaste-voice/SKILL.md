@@ -19,15 +19,16 @@ Do not apply it to source code except for surrounding comments or documentation.
 
 ## Companion reference
 
-Before a substantial edit or review, read `tropes-and-rules.md` from this skill
-directory. Use it as a checklist for author-specific voice drift, AI-shaped
-patterns, and weak prose. Treat it as diagnostic guidance, not a rigid ban list.
+Before a substantial edit or review, read
+`resources/tropes-and-rules.md` from this skill directory. Use it as a
+checklist for author-specific voice drift, AI-shaped patterns, and weak prose.
+Treat it as diagnostic guidance, not a rigid ban list.
 
 The mechanical copy rules that apply to all written files regardless of task
 (straight quotes, no decorative unicode, sentence-case headings, restrained
-punctuation, plain vocabulary) live in `voice.instructions.md` in this skill
-directory. This skill's guidance is the deeper editorial layer on top of those
-baseline rules.
+punctuation, plain vocabulary) live in `resources/voice.instructions.md` in
+this skill directory. This skill's guidance is the deeper editorial layer on
+top of those baseline rules.
 
 ## Voice target
 
@@ -137,7 +138,7 @@ it chatty merely to make it sound personal.
 
 ### 5. Audit before editing
 
-Scan the draft against `tropes-and-rules.md`. Look for clusters of:
+Scan the draft against `resources/tropes-and-rules.md`. Look for clusters of:
 
 * generic AI-shaped phrasing
 * significance inflation

@@ -580,12 +580,13 @@ Watch for:
 ## Formatting tells
 
 The baseline punctuation, heading-case, unicode, filler, and bullet-formatting
-rules are always-on and live in `voice.instructions.md` in this skill directory.
+rules are always-on and live in `resources/voice.instructions.md` in this skill
+directory.
 Apply them during every edit.
 
 ## Filler and hedging
 
-Use the replacement table in `voice.instructions.md` for mechanical filler. In
+Use the replacement table in `resources/voice.instructions.md` for mechanical filler. In
 this checklist, treat filler as a voice clue: if a paragraph needs several
 filler edits, it probably also lacks a concrete actor, example, or point.
 
