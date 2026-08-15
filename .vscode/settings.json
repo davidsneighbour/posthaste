@@ -7,6 +7,35 @@
       "scope": "workspace"
     }
   },
-  "cSpell.dictionaries": ["posthaste"],
-  "cSpell.language": "en-GB"
+  "cSpell.dictionaries": [
+    "posthaste"
+  ],
+  "cSpell.language": "en-GB",
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#eed4af",
+    "activityBar.background": "#eed4af",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#229e6a",
+    "activityBarBadge.foreground": "#e7e7e7",
+    "activityBarTop.activeBackground": "#eed4af",
+    "activityBarTop.background": "#eed4af",
+    "activityBarTop.foreground": "#15202b",
+    "activityBarTop.inactiveForeground": "#15202b99",
+    "commandCenter.border": "#15202b99",
+    "commandCenter.foreground": "#15202b",
+    "sash.hoverBorder": "#eed4af",
+    "statusBar.background": "#e5be85",
+    "statusBar.debuggingBackground": "#e5be85",
+    "statusBar.debuggingForeground": "#15202b",
+    "statusBar.foreground": "#15202b",
+    "statusBarItem.hoverBackground": "#dca85b",
+    "statusBarItem.remoteBackground": "#1c8359",
+    "statusBarItem.remoteForeground": "#15202b",
+    "titleBar.activeBackground": "#e5be85",
+    "titleBar.activeForeground": "#15202b",
+    "titleBar.inactiveBackground": "#e5be8599",
+    "titleBar.inactiveForeground": "#15202b99"
+  },
+  "peacock.color": "#e5be85"
 }
