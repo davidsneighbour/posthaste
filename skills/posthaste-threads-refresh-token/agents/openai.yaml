@@ -1,0 +1,7 @@
+interface:
+  display_name: "Posthaste! Threads Refresh Token"
+  short_description: "Set up Threads posting credentials"
+  default_prompt: "Use $posthaste-threads-refresh-token to create or refresh Threads API credentials for Posthaste! posting."
+
+policy:
+  allow_implicit_invocation: false

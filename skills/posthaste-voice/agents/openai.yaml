@@ -1,0 +1,4 @@
+interface:
+  display_name: "Posthaste! Voice"
+  short_description: "Edit prose in the author's voice"
+  default_prompt: "Use $posthaste-voice to edit this prose so it sounds like the author while preserving meaning."

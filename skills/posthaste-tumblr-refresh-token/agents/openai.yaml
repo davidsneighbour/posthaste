@@ -1,0 +1,7 @@
+interface:
+  display_name: "Posthaste! Tumblr Refresh Token"
+  short_description: "Set up Tumblr posting credentials"
+  default_prompt: "Use $posthaste-tumblr-refresh-token to create or refresh Tumblr OAuth2 credentials for Posthaste! posting."
+
+policy:
+  allow_implicit_invocation: false

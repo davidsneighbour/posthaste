@@ -1,0 +1,4 @@
+interface:
+  display_name: "Posthaste!"
+  short_description: "Route social publishing workflows"
+  default_prompt: "Use $posthaste to choose the right Posthaste! workflow for drafting, reviewing, configuring, or publishing social posts."

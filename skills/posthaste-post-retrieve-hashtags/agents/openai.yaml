@@ -1,0 +1,4 @@
+interface:
+  display_name: "Posthaste! Hashtag Retrieval"
+  short_description: "Generate topical social hashtags"
+  default_prompt: "Use $posthaste-post-retrieve-hashtags to generate topical hashtag candidates for this URL or text."

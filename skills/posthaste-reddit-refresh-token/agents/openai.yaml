@@ -1,0 +1,7 @@
+interface:
+  display_name: "Posthaste! Reddit Refresh Token"
+  short_description: "Set up Reddit posting credentials"
+  default_prompt: "Use $posthaste-reddit-refresh-token to create a Reddit OAuth refresh token for Posthaste! posting."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Posthaste! Config"
+  short_description: "Manage Posthaste TOML settings"
+  default_prompt: "Use $posthaste-config to inspect, explain, initialise, or update Posthaste! configuration."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Posthaste! Prepare Link"
+  short_description: "Draft social posts from a URL"
+  default_prompt: "Use $posthaste-prepare-link to prepare social posts for this link and stop before publishing until confirmed."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Posthaste! Unsplash"
+  short_description: "Find Unsplash photos for posts"
+  default_prompt: "Use $posthaste-unsplash to search, preview, and select Unsplash photos with attribution."

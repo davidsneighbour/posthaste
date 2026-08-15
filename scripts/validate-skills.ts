@@ -5,6 +5,7 @@
 //   - SKILL.md exists and its front matter parses
 //   - `name` is 1-64 chars, kebab-case, and matches its directory
 //   - `description` is present and at most 1024 chars
+//   - agents/openai.yaml exists and has valid OpenAI UI metadata
 //   - skills/ and skills.sh.json entries are 1:1
 //   - skills/ and the Claude marketplace skill paths are 1:1
 
@@ -16,13 +17,31 @@ const SKILLS_SH_MANIFEST = "skills.sh.json";
 
 const NAME_MAX = 64;
 const DESCRIPTION_MAX = 1024;
+const OPENAI_SHORT_DESCRIPTION_MIN = 25;
+const OPENAI_SHORT_DESCRIPTION_MAX = 64;
 // Lowercase alphanumerics in hyphen-separated groups: no leading, trailing or
 // doubled hyphen, which is every rule the spec puts on `name` bar its length.
 const NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const EXPLICIT_ONLY_SKILLS = [
+  "posthaste-reddit-refresh-token",
+  "posthaste-threads-refresh-token",
+  "posthaste-tumblr-refresh-token",
+];
 
 type Frontmatter = {
   description?: string;
   name?: string;
+};
+
+type OpenAiMetadata = {
+  interface?: {
+    default_prompt?: string;
+    display_name?: string;
+    short_description?: string;
+  };
+  policy?: {
+    allow_implicit_invocation?: boolean;
+  };
 };
 
 type SkillsManifest = {
@@ -66,6 +85,88 @@ const frontmatterOf = (source: string): Frontmatter | null => {
     fields[key] = quoted ? (quoted[1] ?? quoted[2] ?? "") : value;
   }
   return fields;
+};
+
+const openAiMetadataOf = (
+  source: string,
+  path: string,
+): OpenAiMetadata | null => {
+  const metadata: OpenAiMetadata = {};
+  let section: "interface" | "policy" | null = null;
+
+  for (const [lineIndex, line] of source.split("\n").entries()) {
+    if (!line.trim()) continue;
+
+    const sectionMatch = /^([a-z_]+):$/.exec(line);
+    if (sectionMatch) {
+      const sectionName = sectionMatch[1];
+      if (sectionName === "interface" || sectionName === "policy") {
+        section = sectionName;
+        metadata[section] ??= {};
+        continue;
+      }
+
+      fail(
+        path,
+        `unsupported top-level section \`${sectionName}\` on line ${lineIndex + 1}`,
+      );
+      section = null;
+      continue;
+    }
+
+    const fieldMatch = /^ {2}([a-z_]+):[ \t]*(.*)$/.exec(line);
+    if (!fieldMatch || !section) {
+      fail(path, `unsupported YAML shape on line ${lineIndex + 1}`);
+      continue;
+    }
+
+    const key = fieldMatch[1];
+    const rawValue = fieldMatch[2];
+    if (!key || rawValue === undefined) continue;
+
+    if (section === "interface") {
+      const quoted = /^"(.*)"$/.exec(rawValue.trim());
+      if (!quoted) {
+        fail(
+          path,
+          `interface.${key} must be a quoted string on line ${lineIndex + 1}`,
+        );
+        continue;
+      }
+
+      if (
+        key !== "display_name" &&
+        key !== "short_description" &&
+        key !== "default_prompt"
+      ) {
+        fail(path, `unsupported interface field \`${key}\``);
+        continue;
+      }
+
+      metadata.interface ??= {};
+      metadata.interface[key] = quoted[1] ?? "";
+      continue;
+    }
+
+    if (key !== "allow_implicit_invocation") {
+      fail(path, `unsupported policy field \`${key}\``);
+      continue;
+    }
+
+    const value = rawValue.trim();
+    if (value !== "true" && value !== "false") {
+      fail(
+        path,
+        `policy.${key} must be true or false on line ${lineIndex + 1}`,
+      );
+      continue;
+    }
+
+    metadata.policy ??= {};
+    metadata.policy.allow_implicit_invocation = value === "true";
+  }
+
+  return metadata;
 };
 
 const unique = <Value>(values: Value[]): Value[] => [...new Set(values)];
@@ -146,6 +247,58 @@ for (const slug of slugs) {
     fail(
       path,
       `\`description\` is ${description.length} characters (max ${DESCRIPTION_MAX})`,
+    );
+  }
+
+  const openAiPath = join("skills", slug, "agents", "openai.yaml");
+  if (!existsSync(openAiPath)) {
+    fail(openAiPath, "missing agents/openai.yaml");
+    continue;
+  }
+
+  const openAiMetadata = openAiMetadataOf(
+    readFileSync(openAiPath, "utf8"),
+    openAiPath,
+  );
+  const openAiInterface = openAiMetadata?.interface ?? {};
+  const openAiPolicy = openAiMetadata?.policy;
+
+  if (!openAiInterface.display_name) {
+    fail(openAiPath, "interface.display_name is required");
+  }
+
+  const shortDescription = openAiInterface.short_description ?? "";
+  if (!shortDescription) {
+    fail(openAiPath, "interface.short_description is required");
+  } else if (
+    shortDescription.length < OPENAI_SHORT_DESCRIPTION_MIN ||
+    shortDescription.length > OPENAI_SHORT_DESCRIPTION_MAX
+  ) {
+    fail(
+      openAiPath,
+      `interface.short_description is ${shortDescription.length} characters ` +
+        `(must be ${OPENAI_SHORT_DESCRIPTION_MIN}-${OPENAI_SHORT_DESCRIPTION_MAX})`,
+    );
+  }
+
+  const defaultPrompt = openAiInterface.default_prompt ?? "";
+  if (!defaultPrompt) {
+    fail(openAiPath, "interface.default_prompt is required");
+  } else if (!defaultPrompt.includes(`$${slug}`)) {
+    fail(openAiPath, `interface.default_prompt must mention $${slug}`);
+  }
+
+  if (EXPLICIT_ONLY_SKILLS.includes(slug)) {
+    if (openAiPolicy?.allow_implicit_invocation !== false) {
+      fail(
+        openAiPath,
+        "credential helper skills must set policy.allow_implicit_invocation to false",
+      );
+    }
+  } else if (openAiPolicy?.allow_implicit_invocation === false) {
+    fail(
+      openAiPath,
+      "only credential helper skills may disable implicit invocation",
     );
   }
 }
