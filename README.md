@@ -43,14 +43,19 @@ Use `--global` when the skills should be available outside the current project.
 
 Posthaste! can use layered TOML configuration for persistent, non-secret defaults:
 
-```text
-~/.config/posthaste/config.toml   global user configuration
-.posthaste.toml                   project configuration
-```
+| path | notes |
+| --- | --- |
+| ~/.config/posthaste/config.toml | global user configuration |
+| .posthaste.toml | project configuration |
 
 Configuration is applied over defaults owned by each skill. Project settings override global settings, explicitly supplied config files override project settings, environment-specific overrides such as `CROSSPOST_DOTENV` override those files where applicable, and explicit command, argument, or user-request values from the chat override configuration.
 
 ```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 320
+---
 flowchart TD
   defaults("Skill-owned defaults")
   global("Global config<br/>~/.config/posthaste/config.toml")
