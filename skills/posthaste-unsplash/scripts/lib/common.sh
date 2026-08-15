@@ -2,6 +2,7 @@
 # Shared functions for all Unsplash scripts
 
 UNSPLASH_API_BASE="${UNSPLASH_API_BASE:-https://api.unsplash.com}"
+UNSPLASH_RESOLVED_ACCESS_KEY=""
 
 require_command() {
     local command_name="$1"
@@ -14,14 +15,20 @@ require_command() {
 
 # Validate API key exists
 validate_api_key() {
-    if [[ -z "${UNSPLASH_ACCESS_KEY:-}" ]]; then
-        printf 'ERROR: UNSPLASH_ACCESS_KEY not set\n' >&2
-        printf 'Get your key from: https://unsplash.com/developers\n' >&2
-        printf 'Then: export UNSPLASH_ACCESS_KEY=your_key\n' >&2
-        return 1
+    if [[ -n "${UNSPLASH_POSTHASTE_ACCESS_KEY:-}" ]]; then
+        UNSPLASH_RESOLVED_ACCESS_KEY="$UNSPLASH_POSTHASTE_ACCESS_KEY"
+        return 0
     fi
 
-    return 0
+    if [[ -n "${UNSPLASH_ACCESS_KEY:-}" ]]; then
+        UNSPLASH_RESOLVED_ACCESS_KEY="$UNSPLASH_ACCESS_KEY"
+        return 0
+    fi
+
+    printf 'ERROR: UNSPLASH_POSTHASTE_ACCESS_KEY or UNSPLASH_ACCESS_KEY not set\n' >&2
+    printf 'Get your key from: https://unsplash.com/developers\n' >&2
+    printf 'Then: export UNSPLASH_POSTHASTE_ACCESS_KEY=your_key\n' >&2
+    return 1
 }
 
 # Make API request with error handling
@@ -34,6 +41,7 @@ api_request() {
     [[ -n "$params" ]] && url="${url}?${params}"
 
     require_command curl || return 1
+    [[ -n "$UNSPLASH_RESOLVED_ACCESS_KEY" ]] || validate_api_key || return 1
 
     local body
     local http_code
@@ -41,7 +49,7 @@ api_request() {
 
     if ! response=$(curl -sS -w "\n%{http_code}" \
         -H "Accept-Version: v1" \
-        -H "Authorization: Client-ID $UNSPLASH_ACCESS_KEY" \
+        -H "Authorization: Client-ID $UNSPLASH_RESOLVED_ACCESS_KEY" \
         --max-time 30 \
         "$url" 2>&1); then
         printf 'ERROR: API request failed before receiving an HTTP response\n' >&2

@@ -2,15 +2,18 @@
 
 Use this procedure before every Unsplash API operation.
 
-## Required variable
+## Supported variables
 
-The skill uses:
+The skill checks for credentials in this order:
 
 ```text
+UNSPLASH_POSTHASTE_ACCESS_KEY
 UNSPLASH_ACCESS_KEY
 ```
 
-Never use bundled, example, demo, testing, or fallback credentials.
+Prefer `UNSPLASH_POSTHASTE_ACCESS_KEY` so Posthaste can use its own Unsplash API key when other workflows also use Unsplash.
+
+Never use bundled, example, demo, or testing credentials.
 
 Never print or log the key.
 
@@ -24,12 +27,14 @@ Whenever referring to an existing key in output, represent it only as:
 
 Resolve credentials in this order:
 
-1. Check whether `UNSPLASH_ACCESS_KEY` is already available to the current process.
-2. If unavailable, check whether the project root contains `.env`.
-3. If `.env` exists, load it into the process environment.
-4. Confirm only that `UNSPLASH_ACCESS_KEY` exists and is non-empty.
-5. Ensure child Bash scripts inherit the resulting environment.
-6. Continue only when a usable key is available.
+1. Check whether `UNSPLASH_POSTHASTE_ACCESS_KEY` is already available to the current process.
+2. If unavailable, check whether `UNSPLASH_ACCESS_KEY` is already available to the current process.
+3. If neither variable is available, check whether the project root contains `.env`.
+4. If `.env` exists, load it into the process environment.
+5. After loading `.env`, check `UNSPLASH_POSTHASTE_ACCESS_KEY` first, then `UNSPLASH_ACCESS_KEY`.
+6. Confirm only that one supported variable exists and is non-empty.
+7. Ensure child Bash scripts inherit the resulting environment.
+8. Continue only when a usable key is available.
 
 Do not expose the credential while checking for it.
 
@@ -57,6 +62,8 @@ Do not use commands whose visible output could expose secrets, including:
 env
 printenv
 cat .env
+grep UNSPLASH_POSTHASTE_ACCESS_KEY .env
+echo "$UNSPLASH_POSTHASTE_ACCESS_KEY"
 grep UNSPLASH_ACCESS_KEY .env
 echo "$UNSPLASH_ACCESS_KEY"
 ```
@@ -72,7 +79,7 @@ Return:
 ```text
 No Unsplash API key is configured.
 
-I need UNSPLASH_ACCESS_KEY available in the environment or project .env before I can use Unsplash.
+I need UNSPLASH_POSTHASTE_ACCESS_KEY or UNSPLASH_ACCESS_KEY available in the environment or project .env before I can use Unsplash.
 
 You can either:
 1. configure an existing Unsplash API key, or
@@ -101,12 +108,12 @@ Setup flow:
 4. Accept the API terms presented by Unsplash.
 5. Open the application's Keys section.
 6. Copy the application's **Access Key**.
-7. Store it as `UNSPLASH_ACCESS_KEY` in the appropriate environment or project `.env`.
+7. Store it as `UNSPLASH_POSTHASTE_ACCESS_KEY` in the appropriate environment or project `.env`. Use `UNSPLASH_ACCESS_KEY` only when a shared Unsplash key is intentional.
 
 Example `.env` entry:
 
 ```dotenv
-UNSPLASH_ACCESS_KEY=your_access_key_here
+UNSPLASH_POSTHASTE_ACCESS_KEY=your_access_key_here
 ```
 
 Do not ask the user to paste the key into chat unless they explicitly choose to do so.
@@ -116,6 +123,7 @@ Prefer that they configure it directly in their environment or `.env`.
 If demonstrating a configured key, always mask it:
 
 ```text
+UNSPLASH_POSTHASTE_ACCESS_KEY=***
 UNSPLASH_ACCESS_KEY=***
 ```
 
@@ -126,14 +134,14 @@ If Unsplash rejects the configured credential:
 ```text
 The configured Unsplash API key was rejected.
 
-UNSPLASH_ACCESS_KEY is currently set to ***, but Unsplash did not accept it.
+The configured Unsplash access key is currently set to ***, but Unsplash did not accept it.
 ```
 
 Do not reveal the actual value.
 
 ## Child-process requirement
 
-Before reporting an authentication failure from `search.sh`, `random.sh`, or `track.sh`, verify that the script actually inherited `UNSPLASH_ACCESS_KEY`.
+Before reporting an authentication failure from `search.sh`, `random.sh`, or `track.sh`, verify that the script actually inherited `UNSPLASH_POSTHASTE_ACCESS_KEY` or `UNSPLASH_ACCESS_KEY`.
 
 A key present only inside an unexported shell variable is insufficient.
 

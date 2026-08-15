@@ -361,8 +361,8 @@ Do not silently replace invalid values unless the correction is unambiguous.
 ## Operational rules
 
 1. Read authentication and compliance references before API calls.
-2. Never expose `UNSPLASH_ACCESS_KEY`.
-3. Never use a bundled, demo, testing, or fallback key.
+2. Never expose `UNSPLASH_POSTHASTE_ACCESS_KEY` or `UNSPLASH_ACCESS_KEY`.
+3. Never use a bundled, demo, testing, or repository-owned shared key.
 4. Treat `find` as `search`.
 5. Ask for a query when `search`/`find` has none.
 6. Ask for random-photo options when `random` has no parameters.

@@ -183,6 +183,7 @@ No Unsplash photos matched those criteria.
 Never include:
 
 ```text
+UNSPLASH_POSTHASTE_ACCESS_KEY
 UNSPLASH_ACCESS_KEY
 Authorization
 client_secret

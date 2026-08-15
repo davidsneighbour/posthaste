@@ -24,7 +24,8 @@ README assets live in `.github/assets/`.
   from a URL or text block.
 - `posthaste-unsplash`: searches, previews, selects, and tracks Unsplash photos
   with mandatory attribution, download tracking on final selection, and
-  credentials from `UNSPLASH_ACCESS_KEY`.
+  credentials from `UNSPLASH_POSTHASTE_ACCESS_KEY`, falling back to
+  `UNSPLASH_ACCESS_KEY`.
 - `posthaste-voice`: prose editing skill. For substantial edits, use
   `skills/posthaste-voice/tropes-and-rules.md` as the diagnostic checklist.
 - `posthaste-reddit-refresh-token`, `posthaste-threads-refresh-token`, and
@@ -105,7 +106,8 @@ unsafe dotenv permissions unless the user requests a permissions fix.
 
 Never print, paste, summarize, or commit real token, secret, authorization code,
 or credential values. The Unsplash skill must not use bundled, demo, testing,
-or fallback credentials; use a caller-provided `UNSPLASH_ACCESS_KEY`.
+or repository-owned credentials; prefer a caller-provided
+`UNSPLASH_POSTHASTE_ACCESS_KEY`, falling back to `UNSPLASH_ACCESS_KEY`.
 
 ## Agent Workflow
 
