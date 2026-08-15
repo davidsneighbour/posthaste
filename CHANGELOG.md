@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.1.0](https://github.com/davidsneighbour/posthaste/compare/v1.0.0...v1.1.0) (2026-08-15)
+
+### Feat
+
+* **posthaste-unsplash:** register Unsplash skill ([8926fee](https://github.com/davidsneighbour/posthaste/commit/8926fee41ac5159c36c7f085a8f9000b5904303a)), closes [#17](https://github.com/davidsneighbour/posthaste/issues/17)
+
+### Docs
+
+* **fix:** readme markup fixes ([25c2043](https://github.com/davidsneighbour/posthaste/commit/25c2043b2b5614361037360b7e12c35d9091e236))
+* **fix:** update README.md ([c060bf3](https://github.com/davidsneighbour/posthaste/commit/c060bf34b7b9d049a1f449f627a983fcc89b9276))
+
+### Build
+
+* **vscode:** update workspace configuration ([de620f2](https://github.com/davidsneighbour/posthaste/commit/de620f27b9ea78c02ec74c44fa9133fca080c5f4))
+
+### Chore
+
+* add claude plugin marketplace ([11a4228](https://github.com/davidsneighbour/posthaste/commit/11a42287319321cc21e18ab90ecd17d385196c73)), closes [#16](https://github.com/davidsneighbour/posthaste/issues/16)
+* validate skill manifest metadata ([955d5d6](https://github.com/davidsneighbour/posthaste/commit/955d5d6766d07116a95905573de6b7cd5a9616f0)), closes [#15](https://github.com/davidsneighbour/posthaste/issues/15)
+
 ## 1.0.0 (2026-08-09)
 
 ### Feat
