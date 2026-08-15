@@ -7,6 +7,7 @@
       "description": "Core skills for drafting, adapting, and publishing social posts.",
       "skills": [
         "posthaste",
+        "posthaste-config",
         "posthaste-prepare-link",
         "posthaste-post-retrieve-hashtags",
         "posthaste-voice"
