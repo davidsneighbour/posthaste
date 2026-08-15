@@ -10,6 +10,7 @@
         "posthaste-config",
         "posthaste-prepare-link",
         "posthaste-post-retrieve-hashtags",
+        "posthaste-unsplash",
         "posthaste-voice"
       ]
     },

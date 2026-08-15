@@ -22,13 +22,14 @@ README assets live in `.github/assets/`.
   only after explicit confirmation, and logs posted networks to avoid repeats.
 - `posthaste-post-retrieve-hashtags`: prompt-only topical hashtag generation
   from a URL or text block.
+- `posthaste-unsplash`: searches, previews, selects, and tracks Unsplash photos
+  with mandatory attribution, download tracking on final selection, and
+  credentials from `UNSPLASH_ACCESS_KEY`.
 - `posthaste-voice`: prose editing skill. For substantial edits, use
   `skills/posthaste-voice/tropes-and-rules.md` as the diagnostic checklist.
 - `posthaste-reddit-refresh-token`, `posthaste-threads-refresh-token`, and
   `posthaste-tumblr-refresh-token`: OAuth setup helpers that must never expose
   token values.
-- `posthaste-unsplash`: bash/curl/jq image search helper with mandatory
-  Unsplash attribution.
 
 ## Build, Test, and Development Commands
 
@@ -103,9 +104,8 @@ must require explicit write flags before persisting values and must refuse
 unsafe dotenv permissions unless the user requests a permissions fix.
 
 Never print, paste, summarize, or commit real token, secret, authorization code,
-or credential values. The Unsplash demo key in
-`skills/posthaste-unsplash/.env.example` and related docs is intentionally a
-public demo credential and may remain.
+or credential values. The Unsplash skill must not use bundled, demo, testing,
+or fallback credentials; use a caller-provided `UNSPLASH_ACCESS_KEY`.
 
 ## Agent Workflow
 

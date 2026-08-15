@@ -16,6 +16,7 @@
         "./skills/posthaste-config",
         "./skills/posthaste-prepare-link",
         "./skills/posthaste-post-retrieve-hashtags",
+        "./skills/posthaste-unsplash",
         "./skills/posthaste-voice",
         "./skills/posthaste-reddit-refresh-token",
         "./skills/posthaste-threads-refresh-token",
