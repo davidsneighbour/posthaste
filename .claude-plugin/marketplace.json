@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "posthaste",
+  "description": "Posthaste! social publishing skills for drafting, adapting, reviewing, configuring, and publishing social media content.",
+  "owner": {
+    "name": "David's Neighbour"
+  },
+  "plugins": [
+    {
+      "name": "posthaste",
+      "description": "Collection of Posthaste! skills for social publishing workflows and credential setup.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/posthaste",
+        "./skills/posthaste-config",
+        "./skills/posthaste-prepare-link",
+        "./skills/posthaste-post-retrieve-hashtags",
+        "./skills/posthaste-voice",
+        "./skills/posthaste-reddit-refresh-token",
+        "./skills/posthaste-threads-refresh-token",
+        "./skills/posthaste-tumblr-refresh-token"
+      ]
+    }
+  ]
+}

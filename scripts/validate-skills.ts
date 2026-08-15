@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 // Checks each skill against the Agent Skills spec <https://agentskills.io/specification>
-// and against the skills.sh manifest:
+// and against install manifests:
 //
 //   - SKILL.md exists and its front matter parses
 //   - `name` is 1-64 chars, kebab-case, and matches its directory
 //   - `description` is present and at most 1024 chars
 //   - skills/ and skills.sh.json entries are 1:1
+//   - skills/ and the Claude marketplace skill paths are 1:1
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const MANIFEST = "skills.sh.json";
+const CLAUDE_MARKETPLACE = ".claude-plugin/marketplace.json";
+const SKILLS_SH_MANIFEST = "skills.sh.json";
 
 const NAME_MAX = 64;
 const DESCRIPTION_MAX = 1024;
@@ -27,6 +29,15 @@ type SkillsManifest = {
   groupings?: Array<{
     skills?: unknown;
     title?: unknown;
+  }>;
+};
+
+type ClaudeMarketplace = {
+  plugins?: Array<{
+    name?: unknown;
+    skills?: unknown;
+    source?: unknown;
+    strict?: unknown;
   }>;
 };
 
@@ -59,6 +70,11 @@ const frontmatterOf = (source: string): Frontmatter | null => {
 
 const unique = <Value>(values: Value[]): Value[] => [...new Set(values)];
 
+const duplicates = <Value>(values: Value[]): Value[] =>
+  unique(values).filter(
+    (value) => values.filter((entry) => entry === value).length > 1,
+  );
+
 const readJson = <Value>(path: string): Value | null => {
   try {
     return JSON.parse(readFileSync(path, "utf8")) as Value;
@@ -67,6 +83,27 @@ const readJson = <Value>(path: string): Value | null => {
     fail(path, `unreadable or invalid JSON: ${message}`);
     return null;
   }
+};
+
+const validateListedSlugs = (
+  manifestPath: string,
+  listed: string[],
+  entryKind: string,
+): void => {
+  for (const slug of slugs)
+    if (!listed.includes(slug))
+      fail(manifestPath, `skills/${slug} has no ${entryKind} entry`);
+  for (const name of listed)
+    if (!slugs.includes(name))
+      fail(
+        manifestPath,
+        `${entryKind} entry \`${name}\` has no skills/${name}`,
+      );
+  for (const name of duplicates(listed))
+    fail(
+      manifestPath,
+      `${entryKind} entry \`${name}\` is listed more than once`,
+    );
 };
 
 const slugs = readdirSync("skills", { withFileTypes: true })
@@ -113,20 +150,25 @@ for (const slug of slugs) {
   }
 }
 
-const manifest = readJson<SkillsManifest>(MANIFEST);
+const skillsManifest = readJson<SkillsManifest>(SKILLS_SH_MANIFEST);
 
-if (manifest) {
-  const groupings = Array.isArray(manifest.groupings) ? manifest.groupings : [];
+if (skillsManifest) {
+  const groupings = Array.isArray(skillsManifest.groupings)
+    ? skillsManifest.groupings
+    : [];
   const listed = groupings.flatMap((grouping, index) => {
     if (!Array.isArray(grouping.skills)) {
-      fail(`${MANIFEST} groupings[${index}]`, "`skills` must be an array");
+      fail(
+        `${SKILLS_SH_MANIFEST} groupings[${index}]`,
+        "`skills` must be an array",
+      );
       return [];
     }
 
     return grouping.skills.flatMap((skill) => {
       if (typeof skill === "string") return skill;
       fail(
-        `${MANIFEST} groupings[${index}]`,
+        `${SKILLS_SH_MANIFEST} groupings[${index}]`,
         "`skills` entries must be strings",
       );
       return [];
@@ -135,15 +177,48 @@ if (manifest) {
 
   // A skill with no manifest entry cannot be installed through the repo manifest,
   // and a stale manifest entry points users at a skill that is not present.
-  for (const slug of slugs)
-    if (!listed.includes(slug))
-      fail(MANIFEST, `skills/${slug} has no manifest entry`);
-  for (const name of listed)
-    if (!slugs.includes(name))
-      fail(MANIFEST, `entry \`${name}\` has no skills/${name}`);
-  for (const name of unique(listed))
-    if (listed.filter((entry) => entry === name).length > 1)
-      fail(MANIFEST, `entry \`${name}\` is listed more than once`);
+  validateListedSlugs(SKILLS_SH_MANIFEST, listed, "manifest");
+}
+
+const claudeMarketplace = readJson<ClaudeMarketplace>(CLAUDE_MARKETPLACE);
+
+if (claudeMarketplace) {
+  const plugins = Array.isArray(claudeMarketplace.plugins)
+    ? claudeMarketplace.plugins
+    : [];
+
+  if (plugins.length !== 1) {
+    fail(CLAUDE_MARKETPLACE, "expected exactly one Posthaste! plugin entry");
+  }
+
+  const [plugin] = plugins;
+  if (plugin) {
+    if (plugin.name !== "posthaste") {
+      fail(CLAUDE_MARKETPLACE, 'plugin `name` must be "posthaste"');
+    }
+    if (plugin.source !== "./") {
+      fail(CLAUDE_MARKETPLACE, 'plugin `source` must be "./"');
+    }
+    if (plugin.strict !== false) {
+      fail(CLAUDE_MARKETPLACE, "plugin must set `strict` to false");
+    }
+    if (!Array.isArray(plugin.skills)) {
+      fail(CLAUDE_MARKETPLACE, "plugin `skills` must be an array");
+    } else {
+      const listed = plugin.skills.flatMap((skill) => {
+        if (typeof skill === "string" && skill.startsWith("./skills/")) {
+          return skill.slice("./skills/".length);
+        }
+        fail(
+          CLAUDE_MARKETPLACE,
+          "`skills` entries must be ./skills/<skill-name> paths",
+        );
+        return [];
+      });
+
+      validateListedSlugs(CLAUDE_MARKETPLACE, listed, "Claude marketplace");
+    }
+  }
 }
 
 if (errors.length > 0) {
