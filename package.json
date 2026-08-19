@@ -27,13 +27,12 @@
     "release:patch": "release-it --config .release-it.ts --ci --increment=patch",
     "test": "node --test \"skills/**/*.test.ts\"",
     "validate:skills": "node scripts/validate-skills.ts",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
-  },
-  "dependencies": {
-    "smol-toml": "1.7.1",
-    "twitter-text": "^3.1.0"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "synchwork": "meld ~/github.com/davidsneighbour/clerkwork ~/github.com/davidsneighbour/idiolect ~/github.com/davidsneighbour/posthaste"
   },
   "devDependencies": {
+    "smol-toml": "1.7.1",
+    "twitter-text": "^3.1.0",
     "@biomejs/biome": "2.5.7",
     "@dnbhq/biome-config": "0.2.3",
     "@dnbhq/markdownlint-config": "0.2.11",
@@ -68,13 +67,13 @@
     ],
     "dictionaryDefinitions": [
       {
-        "name": "posthaste",
+        "name": "workspace-dictionary",
         "path": "./.vscode/dictionary.txt",
         "addWords": true
       }
     ],
     "dictionaries": [
-      "posthaste"
+      "workspace-dictionary"
     ]
   }
 }

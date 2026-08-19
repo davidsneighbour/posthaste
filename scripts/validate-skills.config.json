@@ -1,0 +1,7 @@
+{
+  "explicitOnlySkills": [
+    "posthaste-reddit-refresh-token",
+    "posthaste-threads-refresh-token",
+    "posthaste-tumblr-refresh-token"
+  ]
+}

@@ -4,7 +4,7 @@ authors:
   - family-names: "Kollitsch"
     given-names: "Patrick"
     orcid: "https://orcid.org/0000-0001-6250-2135"
-title: "Posthaste!"
+title: "Posthaste"
 version: v1.1.0
 date-released: 2026-08-15
 url: "https://github.com/davidsneighbour/posthaste"

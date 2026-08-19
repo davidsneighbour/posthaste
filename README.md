@@ -1,7 +1,4 @@
-<!-- markdownlint-disable-next-line MD026 -->
-# Posthaste!
-
-![You won't ever believe what I have to tell you!](.github/assets/posthaste.jpg)
+![Posthaste](.github/assets/images/skillwerk/posthaste.png)
 
 ## AI-assisted social publishing, posthaste
 
@@ -16,6 +13,7 @@ Posthaste! is a collection of reusable AI skills for drafting, adapting, reviewi
   * [X/Twitter manual posting](#xtwitter-manual-posting)
   * [Token-authenticated networks](#token-authenticated-networks)
 * [Skills](#skills)
+* [The cabinet of @davidsneighbour's skills](#the-cabinet-of-davidsneighbours-skills)
 
 ## Install
 
@@ -151,3 +149,11 @@ node skills/posthaste-prepare-link/resources/post-crosspost.ts --info
 * `posthaste-reddit-refresh-token` creates Reddit OAuth credentials for direct Reddit posting.
 * `posthaste-threads-refresh-token` creates or refreshes Threads API credentials.
 * `posthaste-tumblr-refresh-token` creates or refreshes Tumblr OAuth2 credentials.
+
+## The cabinet of @davidsneighbour's skills
+
+| Exhibit | Skill |
+| :---: | :--- |
+| [![](.github/assets/images/skillwerk/clerkwork-thumb.png)](https://github.com/davidsneighbour/clerkwork) | **[Clerkwork](https://github.com/davidsneighbour/clerkwork):** It's an engineers world. Start your engines, maintain, contrive, and put in the works. |
+| [![](.github/assets/images/skillwerk/idiolect-thumb.png)](https://github.com/davidsneighbour/idiolect) | **[Idiolect](https://github.com/davidsneighbour/idiolect):** Finding your own language in skill outputs. |
+| [![](.github/assets/images/skillwerk/posthaste-thumb.png)](https://github.com/davidsneighbour/posthaste) | **[Posthaste](https://github.com/davidsneighbour/posthaste):** A collection of skills to post to social media of all kinds. |

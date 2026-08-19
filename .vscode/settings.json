@@ -1,14 +1,14 @@
 {
   "cSpell.customDictionaries": {
-    "posthaste": {
+    "workspace-dictionary": {
       "addWords": true,
-      "name": "posthaste",
+      "name": "workspace-dictionary",
       "path": "${workspaceFolder}/.vscode/dictionary.txt",
       "scope": "workspace"
     }
   },
   "cSpell.dictionaries": [
-    "posthaste"
+    "workspace-dictionary"
   ],
   "cSpell.language": "en-GB",
   "workbench.colorCustomizations": {
