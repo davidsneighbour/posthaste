@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/davidsneighbour/posthaste/compare/v1.1.0...v1.2.0) (2026-08-19)
+
+### Feat
+
+* **skills:** add OpenAI metadata manifests ([600b2c9](https://github.com/davidsneighbour/posthaste/commit/600b2c9d3c7e22c237c929f8dfbb188a8f32032f)), closes [#19](https://github.com/davidsneighbour/posthaste/issues/19)
+* update repo configuration and structures ([9d3fd1f](https://github.com/davidsneighbour/posthaste/commit/9d3fd1fa21fd0ee55f0148263af8542151bb9a77))
+
+### Fix
+
+* **deps:** pin patched js-yaml, linkify-it, markdown-it via overrides ([2a8f5cc](https://github.com/davidsneighbour/posthaste/commit/2a8f5cc724ffff25312d7cbfb607751239911ea7)), closes [davidsneighbour/posthaste#21](https://github.com/davidsneighbour/posthaste/issues/21) [#5](https://github.com/davidsneighbour/posthaste/issues/5) [#4](https://github.com/davidsneighbour/posthaste/issues/4) [#2](https://github.com/davidsneighbour/posthaste/issues/2)
+* **posthaste-unsplash:** prefer skill-specific Unsplash key ([9c66a12](https://github.com/davidsneighbour/posthaste/commit/9c66a12ffffbebbedcb3173174049f2f5b02dc11)), closes [#18](https://github.com/davidsneighbour/posthaste/issues/18)
+* **posthaste-voice:** update resource file references ([2fe3205](https://github.com/davidsneighbour/posthaste/commit/2fe32051ea3cdcd0f0f0f5fd3a71ed3f79b6bec4)), closes [#20](https://github.com/davidsneighbour/posthaste/issues/20)
+
+### Build
+
+* **deps:** update dependencies ([a80af64](https://github.com/davidsneighbour/posthaste/commit/a80af64672f5b3f08c6998df65077d1ade70490f))
+
 ## [1.1.0](https://github.com/davidsneighbour/posthaste/compare/v1.0.0...v1.1.0) (2026-08-15)
 
 ### Feat

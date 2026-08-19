@@ -5,12 +5,12 @@ authors:
     given-names: "Patrick"
     orcid: "https://orcid.org/0000-0001-6250-2135"
 title: "Posthaste"
-version: v1.1.0
-date-released: 2026-08-15
+version: v1.2.0
+date-released: 2026-08-19
 url: "https://github.com/davidsneighbour/posthaste"
 repository-code: "https://github.com/davidsneighbour/posthaste"
 license: "MIT"
-commit: de620f27b9ea78c02ec74c44fa9133fca080c5f4
+commit: 2a8f5cc724ffff25312d7cbfb607751239911ea7
 keywords:
   - ai
   - social media
