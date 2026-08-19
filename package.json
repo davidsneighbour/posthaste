@@ -30,6 +30,15 @@
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "synchwork": "meld ~/github.com/davidsneighbour/clerkwork ~/github.com/davidsneighbour/idiolect ~/github.com/davidsneighbour/posthaste"
   },
+  "overrides": {
+    "js-yaml": "5.2.2",
+    "linkify-it": "5.0.2",
+    "markdownlint-rule-title-case-style": {
+      "markdownlint": {
+        "markdown-it": "14.2.0"
+      }
+    }
+  },
   "devDependencies": {
     "smol-toml": "1.8.0",
     "twitter-text": "^3.1.0",
